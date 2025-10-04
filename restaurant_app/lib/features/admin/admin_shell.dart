@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'dashboard_screen.dart';
+import 'expense_management_screen.dart';
 import 'menu_management_screen.dart';
+import 'reports_screen.dart';
 import 'table_management_screen.dart';
 
 class AdminShell extends StatefulWidget {
@@ -16,12 +18,16 @@ class _AdminShellState extends State<AdminShell> {
 
   final _pages = const [
     DashboardScreen(),
+    ReportsScreen(),
+    ExpenseManagementScreen(),
     TableManagementScreen(),
     MenuManagementScreen(),
   ];
 
   final _titles = const [
     'Panel de control',
+    'Reportes',
+    'Gastos',
     'Mesas',
     'Catálogo',
   ];
@@ -107,6 +113,16 @@ class _AdminShellState extends State<AdminShell> {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard, color: Colors.white),
             label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart, color: Colors.white),
+            label: 'Reportes',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.request_quote_outlined),
+            selectedIcon: Icon(Icons.request_quote, color: Colors.white),
+            label: 'Gastos',
           ),
           NavigationDestination(
             icon: Icon(Icons.table_bar_outlined),
