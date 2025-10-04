@@ -149,6 +149,10 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isCompact = size.width < 600;
+    final horizontalPadding = isCompact ? 16.0 : 24.0;
+    final topPadding = isCompact ? 12.0 : 16.0;
     final title = _isEditingOrder
         ? 'Agregar productos'
         : widget.tableId == null
@@ -164,93 +168,121 @@ class _MenuScreenState extends State<MenuScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.lunch_dining, size: 32, color: Colors.black),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          horizontalPadding,
+                          topPadding,
+                          horizontalPadding,
+                          topPadding,
                         ),
-                        const SizedBox(height: 4),
-                        const Text('Elige tus favoritos de Ing Burger'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                  child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: FirebaseFirestore.instance
-                          .collection('menu_items')
-                          .where('isAvailable', isEqualTo: true)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        final items = snapshot.data!.docs
-                            .map((doc) => MenuItemModel.fromMap(doc.id, doc.data()))
-                            .toList();
-                        if (items.isEmpty) {
-                          return const Center(
-                            child: Text('No hay elementos disponibles por ahora.'),
-                          );
-                        }
-                        final grouped = <String, List<MenuItemModel>>{};
-                        for (final item in items) {
-                          grouped.putIfAbsent(item.category, () => []).add(item);
-                        }
-                        return ListView(
-                          padding: const EdgeInsets.all(20),
-                          children: grouped.entries.map((entry) {
-                            final category = entry.key;
-                            final categoryItems = entry.value;
-                            return Column(
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            const Icon(Icons.lunch_dining, size: 32, color: Colors.black),
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  category,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  title,
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                         fontWeight: FontWeight.bold,
                                       ),
                                 ),
-                                const SizedBox(height: 12),
-                                ...categoryItems.map(
-                                  (item) => _MenuCard(
-                                    item: item,
-                                    currencyFormat: _currencyFormat,
-                                    onAdd: () => _addToCart(item),
-                                  ),
-                                ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 4),
+                                const Text('Elige tus favoritos de Ing Burger'),
                               ],
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                          ),
+                          child: Container(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('menu_items')
+                                  .where('isAvailable', isEqualTo: true)
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return const Center(child: CircularProgressIndicator());
+                                }
+                                final items = snapshot.data!.docs
+                                    .map((doc) => MenuItemModel.fromMap(doc.id, doc.data()))
+                                    .toList();
+                                if (items.isEmpty) {
+                                  return const Center(
+                                    child: Text('No hay elementos disponibles por ahora.'),
+                                  );
+                                }
+                                final grouped = <String, List<MenuItemModel>>{};
+                                for (final item in items) {
+                                  grouped.putIfAbsent(item.category, () => []).add(item);
+                                }
+                                return ListView(
+                                  padding: EdgeInsets.fromLTRB(
+                                    horizontalPadding,
+                                    20,
+                                    horizontalPadding,
+                                    20,
+                                  ),
+                                  children: grouped.entries.map((entry) {
+                                    final category = entry.key;
+                                    final categoryItems = entry.value;
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          category,
+                                          style:
+                                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        ...categoryItems.map(
+                                          (item) => _MenuCard(
+                                            item: item,
+                                            currencyFormat: _currencyFormat,
+                                            onAdd: () => _addToCart(item),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                      ],
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (_cart.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding,
+                          ),
+                          child: _buildCartSummary(),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-              if (_cart.isNotEmpty) _buildCartSummary(),
-            ],
+              );
+            },
           ),
         ),
       ),
@@ -284,7 +316,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Widget _buildCartSummary() {
     return Card(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      margin: const EdgeInsets.only(bottom: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -364,64 +396,91 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: const Color(0xFFFFC107).withOpacity(.2),
-              child: Text(
-                item.name.isNotEmpty ? item.name[0].toUpperCase() : '🍔',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.description?.isNotEmpty == true
-                        ? item.description!
-                        : 'Perfecto para compartir y disfrutar.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    currencyFormat.format(item.price),
-                    style: const TextStyle(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 520;
+        final avatar = CircleAvatar(
+          radius: 28,
+          backgroundColor: const Color(0xFFFFC107).withOpacity(.2),
+          child: Text(
+            item.name.isNotEmpty ? item.name[0].toUpperCase() : '🍔',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
+        );
+        final description = Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.name,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
                     ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.description?.isNotEmpty == true
+                    ? item.description!
+                    : 'Perfecto para compartir y disfrutar.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                currencyFormat.format(item.price),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        );
+        final button = FilledButton(
+          onPressed: onAdd,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          child: const Text('Agregar'),
+        );
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: isCompact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          avatar,
+                          const SizedBox(width: 16),
+                          description,
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: button,
+                      ),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      avatar,
+                      const SizedBox(width: 16),
+                      description,
+                      const SizedBox(width: 12),
+                      button,
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton(
-              onPressed: onAdd,
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              child: const Text('Agregar'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -11,6 +11,10 @@ class TableSelectScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isCompact = size.width < 600;
+    final horizontalPadding = isCompact ? 16.0 : 24.0;
+    final topPadding = isCompact ? 16.0 : 20.0;
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -21,86 +25,160 @@ class TableSelectScreen extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Row(
-                  children: [
-                    const Icon(Icons.table_bar, size: 32, color: Colors.black),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Selecciona una mesa',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final maxWidth = constraints.maxWidth;
+              final isHeaderCompact = maxWidth < 720;
+              final gridPadding = EdgeInsets.all(isCompact ? 16 : 24);
+              final crossAxisCount = maxWidth >= 1200
+                  ? 4
+                  : maxWidth >= 900
+                      ? 3
+                      : maxWidth >= 600
+                          ? 2
+                          : 1;
+              final childAspectRatio = maxWidth >= 1200
+                  ? 1.4
+                  : maxWidth >= 900
+                      ? 1.25
+                      : maxWidth >= 600
+                          ? 1.15
+                          : 1.05;
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1100),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          horizontalPadding,
+                          topPadding,
+                          horizontalPadding,
+                          isCompact ? 8 : 12,
                         ),
-                        const SizedBox(height: 4),
-                        const Text('Visualiza disponibilidad en tiempo real'),
-                      ],
-                    ),
-                    const Spacer(),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
+                        child: isHeaderCompact
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.table_bar, size: 32, color: Colors.black),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Selecciona una mesa',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleLarge
+                                                  ?.copyWith(fontWeight: FontWeight.bold),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            const Text('Visualiza disponibilidad en tiempo real'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.black,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => const PendingOrdersScreen(),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.receipt_long),
+                                      label: const Text('Pedidos'),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  const Icon(Icons.table_bar, size: 32, color: Colors.black),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Selecciona una mesa',
+                                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text('Visualiza disponibilidad en tiempo real'),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: Colors.black,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const PendingOrdersScreen(),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.receipt_long),
+                                    label: const Text('Pedidos'),
+                                  ),
+                                ],
+                              ),
                       ),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const PendingOrdersScreen(),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(28),
+                            topRight: Radius.circular(28),
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.receipt_long),
-                      label: const Text('Pedidos'),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
-                  ),
-                  child: Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: FirebaseFirestore.instance
-                          .collection('tables')
-                          .orderBy('number')
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        final tables = snapshot.data!.docs
-                            .map((doc) => RestaurantTable.fromMap(doc.id, doc.data()))
-                            .toList();
-                        if (tables.isEmpty) {
-                          return const Center(
-                            child: Text('Aún no hay mesas registradas.'),
-                          );
-                        }
-                        return GridView.builder(
-                          padding: const EdgeInsets.all(20),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 1.2,
-                            mainAxisSpacing: 20,
-                            crossAxisSpacing: 20,
-                          ),
-                          itemCount: tables.length,
-                          itemBuilder: (context, index) {
-                            final table = tables[index];
-                            final status = _statusLabel(table.status);
-                            final color = _statusColor(table.status);
-                            return InkWell(
-                              borderRadius: BorderRadius.circular(24),
+                          child: Container(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                              stream: FirebaseFirestore.instance
+                                  .collection('tables')
+                                  .orderBy('number')
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return const Center(child: CircularProgressIndicator());
+                                }
+                                final tables = snapshot.data!.docs
+                                    .map((doc) => RestaurantTable.fromMap(doc.id, doc.data()))
+                                    .toList();
+                                if (tables.isEmpty) {
+                                  return const Center(
+                                    child: Text('Aún no hay mesas registradas.'),
+                                  );
+                                }
+                                return GridView.builder(
+                                  padding: gridPadding,
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    childAspectRatio: childAspectRatio,
+                                    mainAxisSpacing: isCompact ? 16 : 20,
+                                    crossAxisSpacing: isCompact ? 16 : 20,
+                                  ),
+                                  itemCount: tables.length,
+                                  itemBuilder: (context, index) {
+                                    final table = tables[index];
+                                    final status = _statusLabel(table.status);
+                                    final color = _statusColor(table.status);
+                                    return InkWell(
+                                      borderRadius: BorderRadius.circular(24),
                               onTap: () {
                                 if (table.status == 'occupied' &&
                                     table.currentOrderId != null) {
@@ -174,13 +252,17 @@ class TableSelectScreen extends StatelessWidget {
                               ),
                             );
                           },
-                        );
-                      },
-                    ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),

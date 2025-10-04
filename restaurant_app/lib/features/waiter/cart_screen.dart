@@ -14,6 +14,9 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.simpleCurrency(name: 'USD');
+    final size = MediaQuery.of(context).size;
+    final isCompact = size.width < 600;
+    final horizontalPadding = isCompact ? 16.0 : 24.0;
     return Scaffold(
       appBar: AppBar(
         title: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -102,115 +105,199 @@ class CartScreen extends StatelessWidget {
             }
 
             return SafeArea(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.receipt_long, size: 32),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Resumen del pedido',
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                  [
-                                    if (tableNumber != null) 'Mesa #$tableNumber',
-                                    'Canal: ${_channelLabel(channel)}',
-                                    'Estado: ${_statusLabel(status)}',
-                                    if (paymentMethod != null)
-                                      'Pago: ${_paymentMethodLabel(paymentMethod)}',
-                                  ].join(' · '),
-                                ),
-                              ],
-                            ),
-                            ),
-                            Chip(
-                              backgroundColor: Colors.black,
-                              labelStyle: const TextStyle(color: Colors.white),
-                              label: Text(currencyFormat.format(total)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: items.isEmpty
-                        ? const Center(
-                            child: Text('Aún no hay productos en este pedido.'),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            itemCount: items.length,
-                            itemBuilder: (context, index) {
-                              final item = items[index];
-                              final qty = (item['qty'] as num).toInt();
-                              final unit = (item['unitPrice'] as num).toDouble();
-                              final subtotal = (item['subtotal'] as num).toDouble();
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 16),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(18)),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor:
-                                        const Color(0xFFFFC107).withOpacity(.2),
-                                    child: Text('${index + 1}'),
-                                  ),
-                                  title: Text(item['name'] as String? ?? 'Producto'),
-                                  subtitle:
-                                      Text('$qty × ${currencyFormat.format(unit)}'),
-                                  trailing: Text(
-                                    currencyFormat.format(subtotal),
-                                    style:
-                                        const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                  if (status == 'open')
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                      child: Row(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: addMoreItems,
-                              icon: const Icon(Icons.playlist_add),
-                              label: const Text('Agregar productos'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: finalizeOrder,
-                              icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Finalizar pedido'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                foregroundColor: Colors.white,
+                          Padding(
+                            padding: EdgeInsets.all(horizontalPadding),
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20)),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: LayoutBuilder(
+                                  builder: (context, contentConstraints) {
+                                    final compactHeader = contentConstraints.maxWidth < 500;
+                                    final detailsText = [
+                                      if (tableNumber != null) 'Mesa #$tableNumber',
+                                      'Canal: ${_channelLabel(channel)}',
+                                      'Estado: ${_statusLabel(status)}',
+                                      if (paymentMethod != null)
+                                        'Pago: ${_paymentMethodLabel(paymentMethod)}',
+                                    ].join(' · ');
+                                    final chip = Chip(
+                                      backgroundColor: Colors.black,
+                                      labelStyle: const TextStyle(color: Colors.white),
+                                      label: Text(currencyFormat.format(total)),
+                                    );
+                                    return compactHeader
+                                        ? Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  const Icon(Icons.receipt_long, size: 32),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          'Resumen del pedido',
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .titleMedium
+                                                              ?.copyWith(
+                                                                  fontWeight:
+                                                                      FontWeight.bold),
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        Text(detailsText),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 12),
+                                              chip,
+                                            ],
+                                          )
+                                        : Row(
+                                            children: [
+                                              const Icon(Icons.receipt_long, size: 32),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Resumen del pedido',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .titleMedium
+                                                          ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight.bold),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(detailsText),
+                                                  ],
+                                                ),
+                                              ),
+                                              chip,
+                                            ],
+                                          );
+                                  },
+                                ),
                               ),
                             ),
                           ),
+                          Expanded(
+                            child: items.isEmpty
+                                ? const Center(
+                                    child: Text('Aún no hay productos en este pedido.'),
+                                  )
+                                : ListView.builder(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: horizontalPadding,
+                                    ),
+                                    itemCount: items.length,
+                                    itemBuilder: (context, index) {
+                                      final item = items[index];
+                                      final qty = (item['qty'] as num).toInt();
+                                      final unit = (item['unitPrice'] as num).toDouble();
+                                      final subtotal =
+                                          (item['subtotal'] as num).toDouble();
+                                      return Card(
+                                        margin: const EdgeInsets.only(bottom: 16),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(18)),
+                                        child: ListTile(
+                                          leading: CircleAvatar(
+                                            backgroundColor: const Color(0xFFFFC107)
+                                                .withOpacity(.2),
+                                            child: Text('${index + 1}'),
+                                          ),
+                                          title: Text(
+                                              item['name'] as String? ?? 'Producto'),
+                                          subtitle: Text(
+                                              '$qty × ${currencyFormat.format(unit)}'),
+                                          trailing: Text(
+                                            currencyFormat.format(subtotal),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                          if (status == 'open')
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                horizontalPadding,
+                                0,
+                                horizontalPadding,
+                                isCompact ? 16 : 20,
+                              ),
+                              child: isCompact
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          onPressed: addMoreItems,
+                                          icon: const Icon(Icons.playlist_add),
+                                          label: const Text('Agregar productos'),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        FilledButton.icon(
+                                          onPressed: finalizeOrder,
+                                          icon: const Icon(Icons.check_circle_outline),
+                                          label: const Text('Finalizar pedido'),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: Colors.black,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            onPressed: addMoreItems,
+                                            icon: const Icon(Icons.playlist_add),
+                                            label: const Text('Agregar productos'),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: FilledButton.icon(
+                                            onPressed: finalizeOrder,
+                                            icon:
+                                                const Icon(Icons.check_circle_outline),
+                                            label: const Text('Finalizar pedido'),
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: Colors.black,
+                                              foregroundColor: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
                         ],
                       ),
                     ),
-                ],
+                  );
+                },
               ),
             );
           },
