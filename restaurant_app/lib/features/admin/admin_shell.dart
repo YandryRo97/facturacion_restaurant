@@ -67,7 +67,7 @@ class _AdminShellState extends State<AdminShell> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Golden Burger',
+                          'Ing Burger',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,

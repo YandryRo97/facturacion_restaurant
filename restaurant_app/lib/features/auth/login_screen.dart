@@ -150,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Icon(Icons.lunch_dining, size: 36, color: Colors.black),
                             SizedBox(width: 8),
                             Text(
-                              'Golden Burger',
+                              'Ing Burger',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w800,

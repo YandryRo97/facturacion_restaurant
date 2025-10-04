@@ -18,7 +18,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+    final start = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 6));
     final end = DateTime(now.year, now.month, now.day);
     _range = DateTimeRange(start: start, end: end);
     _reportFuture = _loadReport();
@@ -36,7 +37,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (picked != null) {
       setState(() {
         _range = DateTimeRange(
-          start: DateTime(picked.start.year, picked.start.month, picked.start.day),
+          start: DateTime(
+              picked.start.year, picked.start.month, picked.start.day),
           end: DateTime(picked.end.year, picked.end.month, picked.end.day),
         );
         _reportFuture = _loadReport();
@@ -44,16 +46,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  /// ✅ Versión sin índice compuesto:
+  /// - Consulta solo por rango en `closedAt` y ordena por el mismo campo.
+  /// - Filtra `status == 'paid'` en cliente.
   Future<_ReportData> _loadReport() async {
     final start = Timestamp.fromDate(_range.start);
-    final endExclusive = Timestamp.fromDate(_range.end.add(const Duration(days: 1)));
+    final endExclusive =
+        Timestamp.fromDate(_range.end.add(const Duration(days: 1)));
 
+    // IMPORTANTE: un único campo en los where (closedAt) + orderBy en el mismo campo
     final snapshot = await FirebaseFirestore.instance
         .collection('orders')
-        .where('status', isEqualTo: 'paid')
         .where('closedAt', isGreaterThanOrEqualTo: start)
         .where('closedAt', isLessThan: endExclusive)
-        .orderBy('closedAt', descending: true)
+        .orderBy('closedAt', descending: true) // permitido sin índice compuesto
         .get();
 
     double totalSales = 0;
@@ -63,11 +69,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
+
+      // Filtrado en cliente para evitar el índice compuesto
+      final status = (data['status'] as String?) ?? '';
+      if (status != 'paid') continue;
+
       final total = (data['total'] as num?)?.toDouble() ?? 0;
       final channel = (data['channel'] as String?) ?? 'dine-in';
-      final closedAt = (data['closedAt'] as Timestamp?)?.toDate() ??
-          (data['createdAt'] as Timestamp?)?.toDate();
+      final closedAt = (data['closedAt'] as Timestamp?)?.toDate()
+          // fallback solo para cálculo de día, pero OJO: si no hay closedAt no entra en la query
+          ?? (data['createdAt'] as Timestamp?)?.toDate();
       if (closedAt == null) continue;
+
       final dayKey = DateFormat('yyyy-MM-dd').format(closedAt);
 
       totalSales += total;
@@ -82,12 +95,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
         (value) => value.copyWith(
           totalSales: value.totalSales + total,
           ordersCount: value.ordersCount + 1,
-          dineInTotal: channel == 'dine-in'
-              ? value.dineInTotal + total
-              : value.dineInTotal,
-          onlineTotal: channel == 'online'
-              ? value.onlineTotal + total
-              : value.onlineTotal,
+          dineInTotal:
+              channel == 'dine-in' ? value.dineInTotal + total : value.dineInTotal,
+          onlineTotal:
+              channel == 'online' ? value.onlineTotal + total : value.onlineTotal,
         ),
         ifAbsent: () => _DailySummary(
           date: DateFormat('yyyy-MM-dd').parse(dayKey),
@@ -104,7 +115,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return _ReportData(
       totalSales: totalSales,
-      ordersCount: snapshot.docs.length,
+      ordersCount: daily.values.fold<int>(0, (acc, d) => acc + d.ordersCount),
       dineInTotal: dineInTotal,
       onlineTotal: onlineTotal,
       dailySummaries: dailySummaries,
@@ -163,6 +174,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
+                  // Útil para depurar si algo más falla
+                  // debugPrint('ERROR reporte: ${snapshot.error}');
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
@@ -183,7 +196,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 40),
                     child: Center(
-                      child: Text('No hay ventas registradas en el periodo seleccionado.'),
+                      child: Text(
+                          'No hay ventas registradas en el periodo seleccionado.'),
                     ),
                   );
                 }
@@ -256,16 +270,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: const Color(0xFF4CAF50).withOpacity(.15),
+                              backgroundColor:
+                                  const Color(0xFF4CAF50).withOpacity(.15),
                               child: Text(DateFormat('dd').format(summary.date)),
                             ),
-                            title: Text(DateFormat('EEEE d MMMM', 'es').format(summary.date)),
+                            title: Text(
+                                DateFormat('EEEE d MMMM', 'es')
+                                    .format(summary.date),
+                            ),
                             subtitle: Text(
                               'Pedidos: ${summary.ordersCount} · Salón: ${_currencyFormat.format(summary.dineInTotal)} · Online: ${_currencyFormat.format(summary.onlineTotal)}',
                             ),
                             trailing: Text(
                               _currencyFormat.format(summary.totalSales),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         );

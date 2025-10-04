@@ -182,7 +182,7 @@ class _MenuScreenState extends State<MenuScreen> {
                               ),
                         ),
                         const SizedBox(height: 4),
-                        const Text('Elige tus favoritos de Golden Burger'),
+                        const Text('Elige tus favoritos de Ing Burger'),
                       ],
                     ),
                   ],

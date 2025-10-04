@@ -34,7 +34,7 @@ class RestaurantApp extends ConsumerWidget {
     );
 
     return MaterialApp.router(
-      title: 'Golden Burger',
+      title: 'Ing Burger',
       routerConfig: router,
       locale: const Locale('es'),
       supportedLocales: const [

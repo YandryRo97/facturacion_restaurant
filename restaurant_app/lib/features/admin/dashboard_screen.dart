@@ -59,7 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                     ),
                     const SizedBox(height: 4),
-                    const Text('Revisa el rendimiento de Golden Burger'),
+                    const Text('Revisa el rendimiento de Ing Burger'),
                   ],
                 ),
                 CircleAvatar(
