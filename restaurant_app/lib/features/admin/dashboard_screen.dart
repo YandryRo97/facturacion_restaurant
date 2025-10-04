@@ -12,7 +12,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late final String _dayId;
   late final String _monthId;
-  final NumberFormat _currencyFormat = NumberFormat.simpleCurrency(locale: 'es');
+  final NumberFormat _currencyFormat = NumberFormat.simpleCurrency(name: 'USD');
 
   @override
   void initState() {
@@ -40,14 +40,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .limit(5);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin · Dashboard')),
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hola, administrador',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('Revisa el rendimiento de Golden Burger'),
+                  ],
+                ),
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.black,
+                  child: const Icon(Icons.bar_chart_rounded, color: Colors.white),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             const _SectionTitle('Hoy'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
               stream: dailyRef.snapshots(),
               builder: (context, snapshot) {
@@ -59,29 +83,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final orders = (data['ordersCount'] ?? 0) as num;
                 final expenses = (data['expensesTotal'] ?? 0).toDouble();
                 final net = (data['netTotal'] ?? (sales - expenses)).toDouble();
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                return GridView.count(
+                  crossAxisCount: MediaQuery.of(context).size.width > 900 ? 4 : 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.6,
                   children: [
                     _MetricTile(
                       title: 'Ventas',
                       value: _currencyFormat.format(sales),
                       icon: Icons.attach_money,
+                      accentColor: const Color(0xFF1DE9B6),
                     ),
                     _MetricTile(
                       title: 'Pedidos',
                       value: orders.toString(),
                       icon: Icons.receipt_long,
+                      accentColor: const Color(0xFFFFC107),
                     ),
                     _MetricTile(
                       title: 'Gastos',
                       value: _currencyFormat.format(expenses),
                       icon: Icons.money_off,
+                      accentColor: const Color(0xFFFF7043),
                     ),
                     _MetricTile(
                       title: 'Neto',
                       value: _currencyFormat.format(net),
                       icon: Icons.trending_up,
+                      accentColor: const Color(0xFF42A5F5),
                     ),
                   ],
                 );
@@ -89,7 +121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 24),
             const _SectionTitle('Este mes'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
               stream: monthlyRef.snapshots(),
               builder: (context, snapshot) {
@@ -102,34 +134,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final dineIn = (data['dineInTotal'] ?? 0).toDouble();
                 final online = (data['onlineTotal'] ?? 0).toDouble();
                 final orders = (data['ordersCount'] ?? 0) as num;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                return GridView.count(
+                  crossAxisCount: MediaQuery.of(context).size.width > 900 ? 3 : 1,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 3,
                   children: [
                     _MetricTile(
                       title: 'Ventas',
                       value: _currencyFormat.format(sales),
                       icon: Icons.shopping_bag,
+                      accentColor: const Color(0xFF4CAF50),
                     ),
                     _MetricTile(
                       title: 'Pedidos',
                       value: orders.toString(),
                       icon: Icons.list_alt,
+                      accentColor: const Color(0xFF651FFF),
                     ),
                     _MetricTile(
                       title: 'Gastos',
                       value: _currencyFormat.format(expenses),
                       icon: Icons.request_quote,
+                      accentColor: const Color(0xFFFF6F00),
                     ),
                     _MetricTile(
                       title: 'Dine-in',
                       value: _currencyFormat.format(dineIn),
                       icon: Icons.storefront,
+                      accentColor: const Color(0xFF00796B),
                     ),
                     _MetricTile(
                       title: 'Online',
                       value: _currencyFormat.format(online),
                       icon: Icons.wifi,
+                      accentColor: const Color(0xFF00ACC1),
                     ),
                   ],
                 );
@@ -137,7 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 24),
             const _SectionTitle('Últimos pedidos'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: recentOrdersQuery.snapshots(),
               builder: (context, snapshot) {
@@ -160,13 +201,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ? DateFormat('dd/MM HH:mm').format(createdAt)
                         : '—';
                     return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          child: Text('$orderNumber'),
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              child: Text('$orderNumber'),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _currencyFormat.format(total),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      _StatusChip(label: 'Canal: $channel'),
+                                      _StatusChip(label: 'Estado: ${_statusLabel(status)}'),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(dateStr),
+                          ],
                         ),
-                        title: Text('Total ${_currencyFormat.format(total)}'),
-                        subtitle: Text('Canal: $channel · Estado: $status'),
-                        trailing: Text(dateStr),
                       ),
                     );
                   }).toList(),
@@ -185,23 +255,31 @@ class _MetricTile extends StatelessWidget {
     required this.title,
     required this.value,
     required this.icon,
+    required this.accentColor,
   });
 
   final String title;
   final String value;
   final IconData icon;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 180,
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: Theme.of(context).colorScheme.primary),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: accentColor),
+              ),
               const SizedBox(height: 12),
               Text(
                 title,
@@ -237,5 +315,36 @@ class _SectionTitle extends StatelessWidget {
           .titleLarge
           ?.copyWith(fontWeight: FontWeight.bold),
     );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      backgroundColor: const Color(0xFFFFF3CD),
+      side: const BorderSide(color: Color(0xFFFFC107)),
+      label: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+}
+
+String _statusLabel(String status) {
+  switch (status) {
+    case 'open':
+      return 'Abierto';
+    case 'paid':
+      return 'Pagado';
+    case 'cancelled':
+      return 'Cancelado';
+    default:
+      return status;
   }
 }

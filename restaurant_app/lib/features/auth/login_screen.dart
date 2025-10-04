@@ -108,76 +108,117 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final busy = _emailLoading || _googleLoading;
     return Scaffold(
-      appBar: AppBar(title: const Text('Acceder')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _emailCtrl,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Ingresa tu correo';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Correo inválido';
-                      }
-                      return null;
-                    },
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFF9C4), Color(0xFFFFECB3)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.lunch_dining, size: 36, color: Colors.black),
+                            SizedBox(width: 8),
+                            Text(
+                              'Golden Burger',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Bienvenido de nuevo',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _emailCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Correo electrónico',
+                            prefixIcon: Icon(Icons.alternate_email),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Ingresa tu correo';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Correo inválido';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Contraseña',
+                            prefixIcon: Icon(Icons.lock_outline),
+                          ),
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Ingresa tu contraseña';
+                            }
+                            if (value.length < 6) {
+                              return 'Debe tener al menos 6 caracteres';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: busy ? null : _loginWithEmail,
+                          child: _emailLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Ingresar'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: busy ? null : _loginWithGoogle,
+                          icon: _googleLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.login),
+                          label: const Text('Continuar con Google'),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Si el correo no existe se creará una cuenta automáticamente. El primer usuario registrado obtiene rol de administrador.',
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passCtrl,
-                    decoration: const InputDecoration(labelText: 'Contraseña'),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingresa tu contraseña';
-                      }
-                      if (value.length < 6) {
-                        return 'Debe tener al menos 6 caracteres';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: busy ? null : _loginWithEmail,
-                    child: _emailLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Ingresar con email'),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: busy ? null : _loginWithGoogle,
-                    icon: _googleLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.login),
-                    label: const Text('Continuar con Google'),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Si el correo no existe se creará una cuenta automáticamente. El primer usuario registrado obtiene rol de administrador.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
               ),
             ),
           ),

@@ -20,7 +20,7 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> {
   final List<OrderItem> _cart = [];
   final OrderRepository _orderRepository = OrderRepository();
-  final NumberFormat _currencyFormat = NumberFormat.simpleCurrency(locale: 'es');
+  final NumberFormat _currencyFormat = NumberFormat.simpleCurrency(name: 'USD');
 
   bool _creatingOrder = false;
 
@@ -110,64 +110,116 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.tableId == null
+        ? 'Pedido digital'
+        : 'Mesa ${widget.tableId}';
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.tableId == null
-            ? 'Menú (online)'
-            : 'Menú mesa ${widget.tableId}'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('menu_items')
-                  .where('isAvailable', isEqualTo: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final items = snapshot.data!.docs
-                    .map((doc) => MenuItemModel.fromMap(doc.id, doc.data()))
-                    .toList();
-                if (items.isEmpty) {
-                  return const Center(child: Text('No hay elementos disponibles.'));
-                }
-                return ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ListTile(
-                        leading: CircleAvatar(child: Text(item.name.isNotEmpty ? item.name[0] : '?')),
-                        title: Text(item.name),
-                        subtitle: Text(item.category),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(_currencyFormat.format(item.price)),
-                            TextButton(
-                              onPressed: () => _addToCart(item),
-                              child: const Text('Agregar'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFF6CC), Color(0xFFFFE082)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          if (_cart.isNotEmpty) _buildCartSummary(),
-        ],
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lunch_dining, size: 32, color: Colors.black),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('Elige tus favoritos de Golden Burger'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('menu_items')
+                          .where('isAvailable', isEqualTo: true)
+                          .orderBy('category')
+                          .orderBy('name')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final items = snapshot.data!.docs
+                            .map((doc) => MenuItemModel.fromMap(doc.id, doc.data()))
+                            .toList();
+                        if (items.isEmpty) {
+                          return const Center(
+                            child: Text('No hay elementos disponibles por ahora.'),
+                          );
+                        }
+                        final grouped = <String, List<MenuItemModel>>{};
+                        for (final item in items) {
+                          grouped.putIfAbsent(item.category, () => []).add(item);
+                        }
+                        return ListView(
+                          padding: const EdgeInsets.all(20),
+                          children: grouped.entries.map((entry) {
+                            final category = entry.key;
+                            final categoryItems = entry.value;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  category,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                const SizedBox(height: 12),
+                                ...categoryItems.map(
+                                  (item) => _MenuCard(
+                                    item: item,
+                                    currencyFormat: _currencyFormat,
+                                    onAdd: () => _addToCart(item),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              if (_cart.isNotEmpty) _buildCartSummary(),
+            ],
+          ),
+        ),
       ),
       floatingActionButton: _cart.isEmpty
           ? null
           : FloatingActionButton.extended(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
               onPressed: _creatingOrder ? null : _createOrder,
               label: Text(
                 _creatingOrder
@@ -178,7 +230,7 @@ class _MenuScreenState extends State<MenuScreen> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.shopping_cart_checkout),
             ),
@@ -187,23 +239,29 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Widget _buildCartSummary() {
     return Card(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Pedido actual',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Icon(Icons.shopping_basket_outlined),
+                const SizedBox(width: 8),
+                Text(
+                  'Pedido actual',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
             ),
-            const Divider(),
-            for (final item in _cart)
-              ListTile(
+            const SizedBox(height: 12),
+            ..._cart.map((item) {
+              return ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(item.name),
                 subtitle: Text(
@@ -228,7 +286,8 @@ class _MenuScreenState extends State<MenuScreen> {
                     ),
                   ],
                 ),
-              ),
+              );
+            }),
             const Divider(),
             Align(
               alignment: Alignment.centerRight,
@@ -239,6 +298,81 @@ class _MenuScreenState extends State<MenuScreen> {
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuCard extends StatelessWidget {
+  const _MenuCard({
+    required this.item,
+    required this.currencyFormat,
+    required this.onAdd,
+  });
+
+  final MenuItemModel item;
+  final NumberFormat currencyFormat;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: const Color(0xFFFFC107).withOpacity(.2),
+              child: Text(
+                item.name.isNotEmpty ? item.name[0].toUpperCase() : '🍔',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.description?.isNotEmpty == true
+                        ? item.description!
+                        : 'Perfecto para compartir y disfrutar.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    currencyFormat.format(item.price),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton(
+              onPressed: onAdd,
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              child: const Text('Agregar'),
             ),
           ],
         ),

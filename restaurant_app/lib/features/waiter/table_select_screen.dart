@@ -10,83 +10,151 @@ class TableSelectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mesas')),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: FirebaseFirestore.instance
-            .collection('tables')
-            .orderBy('number')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final tables = snapshot.data!.docs
-              .map((doc) => RestaurantTable.fromMap(doc.id, doc.data()))
-              .toList();
-          if (tables.isEmpty) {
-            return const Center(child: Text('Aún no hay mesas registradas.'));
-          }
-          return GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 1.1,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-            ),
-            itemCount: tables.length,
-            itemBuilder: (context, index) {
-              final table = tables[index];
-              final Color color;
-              switch (table.status) {
-                case 'free':
-                  color = Colors.green;
-                  break;
-                case 'occupied':
-                  color = Colors.orange;
-                  break;
-                case 'reserved':
-                  color = Colors.blueAccent;
-                  break;
-                default:
-                  color = Colors.grey;
-              }
-              return InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => MenuScreen(tableId: table.id),
-                    ),
-                  );
-                },
-                child: Card(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFF6CC), Color(0xFFFFE082)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.table_bar, size: 32, color: Colors.black),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Mesa ${table.number}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          'Selecciona una mesa',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
-                        const SizedBox(height: 6),
-                        Chip(
-                          label: Text(table.status),
-                          backgroundColor: color.withOpacity(.15),
-                          side: BorderSide(color: color.withOpacity(.6)),
-                        ),
+                        const SizedBox(height: 4),
+                        const Text('Visualiza disponibilidad en tiempo real'),
                       ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
+                  child: Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('tables')
+                          .orderBy('number')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final tables = snapshot.data!.docs
+                            .map((doc) => RestaurantTable.fromMap(doc.id, doc.data()))
+                            .toList();
+                        if (tables.isEmpty) {
+                          return const Center(
+                            child: Text('Aún no hay mesas registradas.'),
+                          );
+                        }
+                        return GridView.builder(
+                          padding: const EdgeInsets.all(20),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1.2,
+                            mainAxisSpacing: 20,
+                            crossAxisSpacing: 20,
+                          ),
+                          itemCount: tables.length,
+                          itemBuilder: (context, index) {
+                            final table = tables[index];
+                            final status = _statusLabel(table.status);
+                            final color = _statusColor(table.status);
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(24),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => MenuScreen(tableId: table.id),
+                                  ),
+                                );
+                              },
+                              child: Card(
+                                elevation: 6,
+                                shadowColor: color.withOpacity(.3),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: color.withOpacity(.15),
+                                            child: Icon(Icons.event_seat, color: color),
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            '#${table.number}',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        '${table.seats} comensales',
+                                        style: Theme.of(context).textTheme.labelLarge,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Chip(
+                                        backgroundColor: color.withOpacity(.18),
+                                        side: BorderSide(
+                                          color: color.withOpacity(.4),
+                                        ),
+                                        label: Text(
+                                          status,
+                                          style: TextStyle(
+                                            color: color.darken(),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
                 ),
-              );
-            },
-          );
-        },
+              ),
+            ],
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const MenuScreen()),
@@ -96,5 +164,43 @@ class TableSelectScreen extends StatelessWidget {
         icon: const Icon(Icons.shopping_bag_outlined),
       ),
     );
+  }
+}
+
+Color _statusColor(String status) {
+  switch (status) {
+    case 'free':
+      return const Color(0xFF4CAF50);
+    case 'occupied':
+      return const Color(0xFFFF7043);
+    case 'reserved':
+      return const Color(0xFF42A5F5);
+    case 'cleaning':
+      return const Color(0xFF8D6E63);
+    default:
+      return Colors.grey;
+  }
+}
+
+String _statusLabel(String status) {
+  switch (status) {
+    case 'free':
+      return 'Disponible';
+    case 'occupied':
+      return 'Ocupada';
+    case 'reserved':
+      return 'Reservada';
+    case 'cleaning':
+      return 'En limpieza';
+    default:
+      return status;
+  }
+}
+
+extension _ColorDarken on Color {
+  Color darken([double amount = .2]) {
+    final hsl = HSLColor.fromColor(this);
+    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+    return hslDark.toColor();
   }
 }
