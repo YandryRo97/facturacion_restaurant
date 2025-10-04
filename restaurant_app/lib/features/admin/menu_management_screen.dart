@@ -29,6 +29,7 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
     );
     final descriptionCtrl = TextEditingController(text: item?.description ?? '');
     bool isAvailable = item?.isAvailable ?? true;
+    final messenger = ScaffoldMessenger.of(context);
 
     await showModalBottomSheet(
       context: context,
@@ -38,102 +39,135 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            left: 20,
-            right: 20,
-            top: 24,
-          ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item == null ? 'Nuevo producto' : 'Editar producto',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                left: 20,
+                right: 20,
+                top: 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item == null ? 'Nuevo producto' : 'Editar producto',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Nombre'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Ingresa el nombre';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: categoryCtrl,
+                      decoration: const InputDecoration(labelText: 'Categoría'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: descriptionCtrl,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: const InputDecoration(labelText: 'Descripción'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: priceCtrl,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(labelText: 'Precio (USD)'),
+                      validator: (value) {
+                        final normalized = value?.replaceAll(',', '.');
+                        final parsed = double.tryParse(normalized ?? '');
+                        if (parsed == null) {
+                          return 'Ingresa un precio válido';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      value: isAvailable,
+                      title: const Text('Disponible'),
+                      onChanged: (value) => setModalState(() {
+                        isAvailable = value;
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        final normalizedPrice =
+                            priceCtrl.text.replaceAll(',', '.');
+                        final price = double.parse(normalizedPrice);
+                        final description = descriptionCtrl.text.trim();
+                        final data = {
+                          'name': nameCtrl.text.trim(),
+                          'category': categoryCtrl.text.trim(),
+                          'price': price,
+                          'description':
+                              description.isEmpty ? null : description,
+                          'isAvailable': isAvailable,
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        };
+                        final collection = FirebaseFirestore.instance
+                            .collection('menu_items');
+                        try {
+                          if (item == null) {
+                            await collection.add({
+                              ...data,
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Producto creado correctamente.'),
+                              ),
+                            );
+                          } else {
+                            await collection.doc(item.id).update(data);
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content:
+                                    Text('Cambios guardados correctamente.'),
+                              ),
+                            );
+                          }
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        } on FirebaseException catch (e) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                e.message ?? 'No se pudo guardar el producto.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child:
+                          Text(item == null ? 'Crear producto' : 'Guardar cambios'),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Nombre'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Ingresa el nombre';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: categoryCtrl,
-                  decoration: const InputDecoration(labelText: 'Categoría'),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: descriptionCtrl,
-                  minLines: 2,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Descripción'),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: priceCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Precio (USD)'),
-                  validator: (value) {
-                    final parsed = double.tryParse(value ?? '');
-                    if (parsed == null) {
-                      return 'Ingresa un precio válido';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  value: isAvailable,
-                  title: const Text('Disponible'),
-                  onChanged: (value) => setState(() => isAvailable = value),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    final price = double.parse(priceCtrl.text);
-                    final description = descriptionCtrl.text.trim();
-                    final data = {
-                      'name': nameCtrl.text.trim(),
-                      'category': categoryCtrl.text.trim(),
-                      'price': price,
-                      'description': description.isEmpty ? null : description,
-                      'isAvailable': isAvailable,
-                      'updatedAt': FieldValue.serverTimestamp(),
-                    };
-                    final collection =
-                        FirebaseFirestore.instance.collection('menu_items');
-                    if (item == null) {
-                      await collection.add({
-                        ...data,
-                        'createdAt': FieldValue.serverTimestamp(),
-                      });
-                    } else {
-                      await collection.doc(item.id).update(data);
-                    }
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: Text(item == null ? 'Crear producto' : 'Guardar cambios'),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

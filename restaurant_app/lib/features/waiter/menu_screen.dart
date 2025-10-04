@@ -9,9 +9,10 @@ import '../../repositories/order_repository.dart';
 import 'cart_screen.dart';
 
 class MenuScreen extends StatefulWidget {
-  const MenuScreen({super.key, this.tableId});
+  const MenuScreen({super.key, this.tableId, this.tableNumber});
 
   final String? tableId;
+  final int? tableNumber;
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -86,6 +87,7 @@ class _MenuScreenState extends State<MenuScreen> {
       final orderId = await _orderRepository.createOrder(
         waiterId: user.uid,
         tableId: widget.tableId,
+        tableNumber: widget.tableNumber,
         channel: widget.tableId == null ? 'online' : 'dine-in',
         items: List<OrderItem>.from(_cart),
       );
@@ -112,7 +114,7 @@ class _MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     final title = widget.tableId == null
         ? 'Pedido digital'
-        : 'Mesa ${widget.tableId}';
+        : 'Mesa ${widget.tableNumber ?? widget.tableId}';
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(

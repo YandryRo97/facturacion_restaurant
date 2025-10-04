@@ -12,7 +12,21 @@ class CartScreen extends StatelessWidget {
     final currencyFormat = NumberFormat.simpleCurrency(name: 'USD');
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pedido #$orderId'),
+        title: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          stream: FirebaseFirestore.instance
+              .collection('orders')
+              .doc(orderId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            final orderNumber = (snapshot.data?.data()?['orderNumber'] as num?)
+                    ?.toInt() ??
+                null;
+            if (orderNumber == null) {
+              return Text('Pedido #$orderId');
+            }
+            return Text('Pedido #$orderNumber');
+          },
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -39,6 +53,7 @@ class CartScreen extends StatelessWidget {
             final total = (data['total'] ?? 0).toDouble();
             final status = (data['status'] ?? 'open') as String;
             final channel = (data['channel'] ?? 'dine-in') as String;
+            final tableNumber = (data['tableNumber'] as num?)?.toInt();
 
             return SafeArea(
               child: Column(
@@ -64,7 +79,13 @@ class CartScreen extends StatelessWidget {
                                         ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text('Canal: ${_channelLabel(channel)} · Estado: ${_statusLabel(status)}'),
+                                  Text(
+                                    [
+                                      if (tableNumber != null) 'Mesa #$tableNumber',
+                                      'Canal: ${_channelLabel(channel)}',
+                                      'Estado: ${_statusLabel(status)}',
+                                    ].join(' · '),
+                                  ),
                                 ],
                               ),
                             ),

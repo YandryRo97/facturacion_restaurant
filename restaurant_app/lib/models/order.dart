@@ -59,6 +59,7 @@ class OrderModel {
     required this.status,
     required this.waiterId,
     required this.createdAt,
+    this.tableNumber,
     this.tableId,
     this.closedAt,
     this.paymentMethod,
@@ -67,6 +68,7 @@ class OrderModel {
   final String id;
   final int orderNumber;
   final String? tableId;
+  final int? tableNumber;
   final String channel;
   final List<OrderItem> items;
   final double total;
@@ -90,6 +92,7 @@ class OrderModel {
       id: id,
       orderNumber: (data['orderNumber'] as num?)?.toInt() ?? 0,
       tableId: data['tableId'] as String?,
+      tableNumber: (data['tableNumber'] as num?)?.toInt(),
       channel: data['channel'] as String? ?? 'dine-in',
       items: items,
       total: (data['total'] as num?)?.toDouble() ?? 0,
@@ -105,6 +108,7 @@ class OrderModel {
     return {
       'orderNumber': orderNumber,
       'tableId': tableId,
+      'tableNumber': tableNumber,
       'channel': channel,
       'items': items.map((item) => item.toMap()).toList(),
       'total': total,

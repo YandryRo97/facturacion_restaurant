@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -34,23 +35,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _emailLoading = true);
     try {
+      UserCredential credential;
       try {
-        final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
         );
-        await _ensureUserDoc(credential.user!);
       } on FirebaseAuthException catch (e) {
         if (e.code == 'user-not-found') {
-          final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
             email: _emailCtrl.text.trim(),
             password: _passCtrl.text,
           );
           await _ensureUserDoc(credential.user!, defaultRole: 'admin');
-        } else {
-          _showError(e.message ?? 'Ocurrió un error inesperado');
+          if (!mounted) return;
+          context.go('/');
+          return;
         }
+        _showError(e.message ?? 'Ocurrió un error inesperado');
+        return;
       }
+      await _ensureUserDoc(credential.user!);
+      if (!mounted) return;
+      context.go('/');
+    } on FirebaseAuthException catch (e) {
+      _showError(e.message ?? 'No se pudo iniciar sesión');
+    } catch (_) {
+      _showError('No se pudo iniciar sesión');
     } finally {
       if (mounted) {
         setState(() => _emailLoading = false);
@@ -72,6 +83,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       final authResult = await FirebaseAuth.instance.signInWithCredential(credential);
       await _ensureUserDoc(authResult.user!);
+      if (!mounted) return;
+      context.go('/');
     } on FirebaseAuthException catch (e) {
       _showError(e.message ?? 'No se pudo iniciar sesión con Google');
     } catch (e) {

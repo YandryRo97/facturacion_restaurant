@@ -86,7 +86,10 @@ class TableSelectScreen extends StatelessWidget {
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) => MenuScreen(tableId: table.id),
+                                    builder: (_) => MenuScreen(
+                                      tableId: table.id,
+                                      tableNumber: table.number,
+                                    ),
                                   ),
                                 );
                               },

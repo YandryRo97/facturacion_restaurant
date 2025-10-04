@@ -24,6 +24,7 @@ class OrderRepository {
   Future<String> createOrder({
     required String waiterId,
     String? tableId,
+    int? tableNumber,
     required String channel,
     required List<OrderItem> items,
   }) async {
@@ -31,9 +32,15 @@ class OrderRepository {
     final total =
         items.fold<double>(0, (value, element) => value + element.subtotal);
     final doc = _db.collection('orders').doc();
+    int? resolvedTableNumber = tableNumber;
+    if (tableId != null && resolvedTableNumber == null) {
+      final tableSnap = await _db.collection('tables').doc(tableId).get();
+      resolvedTableNumber = (tableSnap.data()?['number'] as num?)?.toInt();
+    }
     await doc.set({
       'orderNumber': orderNumber,
       'tableId': tableId,
+      'tableNumber': resolvedTableNumber,
       'channel': channel,
       'items': items.map((item) => item.toMap()).toList(),
       'total': total,
@@ -67,6 +74,16 @@ class OrderRepository {
         if (status == 'paid') 'closedAt': FieldValue.serverTimestamp(),
         if (paymentMethod != null) 'paymentMethod': paymentMethod,
       });
+      final tableId = data['tableId'] as String?;
+      if (tableId != null && (status == 'paid' || status == 'cancelled')) {
+        trx.update(
+          _db.collection('tables').doc(tableId),
+          {
+            'status': 'free',
+            'currentOrderId': null,
+          },
+        );
+      }
       if (status == 'paid') {
         final total = (data['total'] as num?)?.toDouble() ?? 0;
         final channel = (data['channel'] as String?) ?? 'dine-in';
