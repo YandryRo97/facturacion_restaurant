@@ -19,6 +19,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   final _noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   bool _submitting = false;
+  Expense? _editingExpense;
 
   final ExpenseRepository _expenseRepository = ExpenseRepository();
   final NumberFormat _currencyFormat = NumberFormat.simpleCurrency(name: 'USD');
@@ -37,11 +38,71 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
+      locale: const Locale('es'),
     );
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
       });
+    }
+  }
+
+  void _startEditing(Expense expense) {
+    setState(() {
+      _editingExpense = expense;
+      _categoryController.text = expense.category;
+      _amountController.text = expense.amount.toStringAsFixed(2);
+      _noteController.text = expense.note;
+      _selectedDate = expense.date;
+    });
+  }
+
+  void _cancelEditing() {
+    _formKey.currentState?.reset();
+    _categoryController.clear();
+    _amountController.clear();
+    _noteController.clear();
+    setState(() {
+      _selectedDate = DateTime.now();
+      _editingExpense = null;
+    });
+  }
+
+  Future<void> _confirmDelete(Expense expense) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar gasto'),
+        content: const Text('¿Deseas eliminar este gasto? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _expenseRepository.deleteExpense(expense);
+        if (!mounted) return;
+        if (_editingExpense?.id == expense.id) {
+          _cancelEditing();
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gasto eliminado correctamente.')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo eliminar el gasto.')),
+        );
+      }
     }
   }
 
@@ -62,8 +123,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     });
 
     try {
+      final isEditing = _editingExpense != null;
       final expense = Expense(
-        id: '',
+        id: isEditing ? _editingExpense!.id : '',
         category: _categoryController.text.trim().isEmpty
             ? 'General'
             : _categoryController.text.trim(),
@@ -75,7 +137,14 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           _selectedDate.day,
         ),
       );
-      await _expenseRepository.addExpense(expense);
+      if (isEditing) {
+        await _expenseRepository.updateExpense(
+          original: _editingExpense!,
+          updated: expense,
+        );
+      } else {
+        await _expenseRepository.addExpense(expense);
+      }
       if (!mounted) return;
       _formKey.currentState!.reset();
       _categoryController.clear();
@@ -83,14 +152,27 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       _noteController.clear();
       setState(() {
         _selectedDate = DateTime.now();
+        _editingExpense = null;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gasto registrado correctamente.')),
+        SnackBar(
+          content: Text(
+            isEditing
+                ? 'Gasto actualizado correctamente.'
+                : 'Gasto registrado correctamente.',
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo registrar el gasto.')),
+        SnackBar(
+          content: Text(
+            _editingExpense != null
+                ? 'No se pudo actualizar el gasto.'
+                : 'No se pudo registrar el gasto.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -127,7 +209,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Nuevo gasto',
+                        _editingExpense == null ? 'Nuevo gasto' : 'Editar gasto',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -177,7 +259,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             child: OutlinedButton.icon(
                               onPressed: _pickDate,
                               icon: const Icon(Icons.calendar_today),
-                              label: Text(DateFormat('dd/MM/yyyy').format(_selectedDate)),
+                              label: Text(DateFormat('dd/MM/yyyy', 'es').format(_selectedDate)),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -191,11 +273,25 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                                       child: CircularProgressIndicator(strokeWidth: 2),
                                     )
                                   : const Icon(Icons.save),
-                              label: Text(_submitting ? 'Guardando...' : 'Guardar gasto'),
+                              label: Text(
+                                _submitting
+                                    ? 'Guardando...'
+                                    : _editingExpense == null
+                                        ? 'Guardar gasto'
+                                        : 'Actualizar gasto',
+                              ),
                             ),
                           ),
                         ],
                       ),
+                      if (_editingExpense != null) ...[
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: _submitting ? null : _cancelEditing,
+                          icon: const Icon(Icons.close),
+                          label: const Text('Cancelar edición'),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -247,13 +343,56 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         title: Text(expense.category),
                         subtitle: Text(
                           [
-                            DateFormat('dd MMM yyyy').format(expense.date),
+                            DateFormat('dd MMM yyyy', 'es').format(expense.date),
                             if (expense.note.isNotEmpty) expense.note,
                           ].join(' · '),
                         ),
-                        trailing: Text(
-                          _currencyFormat.format(expense.amount),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _currencyFormat.format(expense.amount),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 4),
+                            PopupMenuButton<String>(
+                              tooltip: 'Acciones',
+                              onSelected: (value) {
+                                switch (value) {
+                                  case 'edit':
+                                    _startEditing(expense);
+                                    break;
+                                  case 'delete':
+                                    _confirmDelete(expense);
+                                    break;
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.edit, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Editar'),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.delete, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Eliminar'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     );

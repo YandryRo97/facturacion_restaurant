@@ -141,7 +141,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   onPressed: _pickRange,
                   icon: const Icon(Icons.calendar_month),
                   label: Text(
-                    '${DateFormat('dd/MM/yyyy').format(_range.start)} - ${DateFormat('dd/MM/yyyy').format(_range.end)}',
+                    '${DateFormat('dd/MM/yyyy', 'es').format(_range.start)} - ${DateFormat('dd/MM/yyyy', 'es').format(_range.end)}',
                   ),
                 ),
                 FilledButton.icon(
