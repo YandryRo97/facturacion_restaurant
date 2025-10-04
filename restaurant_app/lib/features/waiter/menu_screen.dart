@@ -161,8 +161,6 @@ class _MenuScreenState extends State<MenuScreen> {
                       stream: FirebaseFirestore.instance
                           .collection('menu_items')
                           .where('isAvailable', isEqualTo: true)
-                          .orderBy('category')
-                          .orderBy('name')
                           .snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {

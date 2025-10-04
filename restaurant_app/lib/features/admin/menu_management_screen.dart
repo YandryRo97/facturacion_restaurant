@@ -180,8 +180,6 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('menu_items')
-            .orderBy('category')
-            .orderBy('name')
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
