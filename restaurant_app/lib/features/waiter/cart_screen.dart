@@ -2,10 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../repositories/order_repository.dart';
+import 'menu_screen.dart';
+
 class CartScreen extends StatelessWidget {
-  const CartScreen({super.key, required this.orderId});
+  CartScreen({super.key, required this.orderId});
 
   final String orderId;
+  final OrderRepository _orderRepository = OrderRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +58,48 @@ class CartScreen extends StatelessWidget {
             final status = (data['status'] ?? 'open') as String;
             final channel = (data['channel'] ?? 'dine-in') as String;
             final tableNumber = (data['tableNumber'] as num?)?.toInt();
+            final paymentMethod = data['paymentMethod'] as String?;
+
+            Future<void> finalizeOrder() async {
+              final method = await _selectPaymentMethod(context);
+              if (method == null) return;
+              try {
+                await _orderRepository.updateOrderStatus(
+                  orderId: orderId,
+                  status: 'paid',
+                  paymentMethod: method,
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pedido finalizado correctamente.')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No se pudo finalizar el pedido.')),
+                  );
+                }
+              }
+            }
+
+            Future<void> addMoreItems() async {
+              final result = await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => MenuScreen(
+                    existingOrderId: orderId,
+                    tableId: data['tableId'] as String?,
+                    tableNumber: tableNumber,
+                    initialChannel: channel,
+                  ),
+                ),
+              );
+              if (result == true && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Productos agregados al pedido.')),
+                );
+              }
+            }
 
             return SafeArea(
               child: Column(
@@ -80,14 +126,16 @@ class CartScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    [
-                                      if (tableNumber != null) 'Mesa #$tableNumber',
-                                      'Canal: ${_channelLabel(channel)}',
-                                      'Estado: ${_statusLabel(status)}',
-                                    ].join(' · '),
-                                  ),
-                                ],
-                              ),
+                                  [
+                                    if (tableNumber != null) 'Mesa #$tableNumber',
+                                    'Canal: ${_channelLabel(channel)}',
+                                    'Estado: ${_statusLabel(status)}',
+                                    if (paymentMethod != null)
+                                      'Pago: ${_paymentMethodLabel(paymentMethod)}',
+                                  ].join(' · '),
+                                ),
+                              ],
+                            ),
                             ),
                             Chip(
                               backgroundColor: Colors.black,
@@ -100,33 +148,68 @@ class CartScreen extends StatelessWidget {
                     ),
                   ),
                   Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final qty = (item['qty'] as num).toInt();
-                        final unit = (item['unitPrice'] as num).toDouble();
-                        final subtotal = (item['subtotal'] as num).toDouble();
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: const Color(0xFFFFC107).withOpacity(.2),
-                              child: Text('${index + 1}'),
-                            ),
-                            title: Text(item['name'] as String? ?? 'Producto'),
-                            subtitle: Text('$qty × ${currencyFormat.format(unit)}'),
-                            trailing: Text(
-                              currencyFormat.format(subtotal),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                    child: items.isEmpty
+                        ? const Center(
+                            child: Text('Aún no hay productos en este pedido.'),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            itemCount: items.length,
+                            itemBuilder: (context, index) {
+                              final item = items[index];
+                              final qty = (item['qty'] as num).toInt();
+                              final unit = (item['unitPrice'] as num).toDouble();
+                              final subtotal = (item['subtotal'] as num).toDouble();
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18)),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor:
+                                        const Color(0xFFFFC107).withOpacity(.2),
+                                    child: Text('${index + 1}'),
+                                  ),
+                                  title: Text(item['name'] as String? ?? 'Producto'),
+                                  subtitle:
+                                      Text('$qty × ${currencyFormat.format(unit)}'),
+                                  trailing: Text(
+                                    currencyFormat.format(subtotal),
+                                    style:
+                                        const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  if (status == 'open')
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: addMoreItems,
+                              icon: const Icon(Icons.playlist_add),
+                              label: const Text('Agregar productos'),
                             ),
                           ),
-                        );
-                      },
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: finalizeOrder,
+                              icon: const Icon(Icons.check_circle_outline),
+                              label: const Text('Finalizar pedido'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             );
@@ -158,5 +241,60 @@ String _channelLabel(String channel) {
       return 'Online';
     default:
       return channel;
+  }
+}
+
+Future<String?> _selectPaymentMethod(BuildContext context) async {
+  return showModalBottomSheet<String>(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
+                'Selecciona el método de pago',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.attach_money),
+              title: const Text('Efectivo'),
+              onTap: () => Navigator.of(context).pop('cash'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.credit_card),
+              title: const Text('Tarjeta'),
+              onTap: () => Navigator.of(context).pop('card'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.payments_outlined),
+              title: const Text('Otro'),
+              onTap: () => Navigator.of(context).pop('other'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+String _paymentMethodLabel(String method) {
+  switch (method) {
+    case 'cash':
+      return 'Efectivo';
+    case 'card':
+      return 'Tarjeta';
+    case 'other':
+      return 'Otro';
+    default:
+      return method;
   }
 }

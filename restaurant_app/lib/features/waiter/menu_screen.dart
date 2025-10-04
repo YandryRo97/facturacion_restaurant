@@ -9,10 +9,18 @@ import '../../repositories/order_repository.dart';
 import 'cart_screen.dart';
 
 class MenuScreen extends StatefulWidget {
-  const MenuScreen({super.key, this.tableId, this.tableNumber});
+  const MenuScreen({
+    super.key,
+    this.tableId,
+    this.tableNumber,
+    this.existingOrderId,
+    this.initialChannel,
+  });
 
   final String? tableId;
   final int? tableNumber;
+  final String? existingOrderId;
+  final String? initialChannel;
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -24,6 +32,8 @@ class _MenuScreenState extends State<MenuScreen> {
   final NumberFormat _currencyFormat = NumberFormat.simpleCurrency(name: 'USD');
 
   bool _creatingOrder = false;
+
+  bool get _isEditingOrder => widget.existingOrderId != null;
 
   void _addToCart(MenuItemModel item) {
     setState(() {
@@ -74,6 +84,13 @@ class _MenuScreenState extends State<MenuScreen> {
       _cart.fold<double>(0, (total, item) => total + item.subtotal);
 
   Future<void> _createOrder() async {
+    if (_cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Agrega al menos un producto.')),
+      );
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,24 +101,44 @@ class _MenuScreenState extends State<MenuScreen> {
 
     setState(() => _creatingOrder = true);
     try {
-      final orderId = await _orderRepository.createOrder(
-        waiterId: user.uid,
-        tableId: widget.tableId,
-        tableNumber: widget.tableNumber,
-        channel: widget.tableId == null ? 'online' : 'dine-in',
-        items: List<OrderItem>.from(_cart),
-      );
-      if (!mounted) return;
-      setState(() {
-        _cart.clear();
-      });
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => CartScreen(orderId: orderId)),
-      );
+      final channel = widget.initialChannel ??
+          (widget.tableId == null ? 'online' : 'dine-in');
+      if (_isEditingOrder) {
+        await _orderRepository.addItemsToOrder(
+          orderId: widget.existingOrderId!,
+          items: List<OrderItem>.from(_cart),
+        );
+        if (!mounted) return;
+        setState(() {
+          _cart.clear();
+        });
+        Navigator.of(context).pop(true);
+      } else {
+        final orderId = await _orderRepository.createOrder(
+          waiterId: user.uid,
+          tableId: widget.tableId,
+          tableNumber: widget.tableNumber,
+          channel: channel,
+          items: List<OrderItem>.from(_cart),
+        );
+        if (!mounted) return;
+        setState(() {
+          _cart.clear();
+        });
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => CartScreen(orderId: orderId)),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo crear el pedido.')),
+        SnackBar(
+          content: Text(
+            _isEditingOrder
+                ? 'No se pudo actualizar el pedido.'
+                : 'No se pudo crear el pedido.',
+          ),
+        ),
       );
     } finally {
       if (mounted) {
@@ -112,9 +149,11 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.tableId == null
-        ? 'Pedido digital'
-        : 'Mesa ${widget.tableNumber ?? widget.tableId}';
+    final title = _isEditingOrder
+        ? 'Agregar productos'
+        : widget.tableId == null
+            ? 'Pedido digital'
+            : 'Mesa ${widget.tableNumber ?? widget.tableId}';
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -223,8 +262,12 @@ class _MenuScreenState extends State<MenuScreen> {
               onPressed: _creatingOrder ? null : _createOrder,
               label: Text(
                 _creatingOrder
-                    ? 'Creando pedido...'
-                    : 'Crear pedido (${_currencyFormat.format(_cartTotal)})',
+                    ? (_isEditingOrder
+                        ? 'Actualizando...'
+                        : 'Creando pedido...')
+                    : _isEditingOrder
+                        ? 'Agregar (${_currencyFormat.format(_cartTotal)})'
+                        : 'Crear pedido (${_currencyFormat.format(_cartTotal)})',
               ),
               icon: _creatingOrder
                   ? const SizedBox(
@@ -232,7 +275,9 @@ class _MenuScreenState extends State<MenuScreen> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Icon(Icons.shopping_cart_checkout),
+                  : Icon(_isEditingOrder
+                      ? Icons.playlist_add_circle
+                      : Icons.shopping_cart_checkout),
             ),
     );
   }

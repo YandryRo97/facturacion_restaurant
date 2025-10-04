@@ -122,4 +122,54 @@ class OrderRepository {
       }
     });
   }
+
+  Future<void> addItemsToOrder({
+    required String orderId,
+    required List<OrderItem> items,
+  }) async {
+    if (items.isEmpty) {
+      return;
+    }
+
+    final doc = _db.collection('orders').doc(orderId);
+    await _db.runTransaction((trx) async {
+      final snapshot = await trx.get(doc);
+      if (!snapshot.exists) {
+        throw StateError('El pedido no existe');
+      }
+      final data = snapshot.data()!;
+      final status = data['status'] as String? ?? 'open';
+      if (status != 'open') {
+        throw StateError('El pedido ya no se puede modificar');
+      }
+
+      final rawItems = (data['items'] as List?) ?? const [];
+      final currentItems = rawItems
+          .map((dynamic item) => OrderItem.fromMap(
+                Map<String, dynamic>.from(item as Map<dynamic, dynamic>),
+              ))
+          .toList();
+
+      final updatedItems = List<OrderItem>.from(currentItems);
+      for (final item in items) {
+        final index = updatedItems
+            .indexWhere((element) => element.menuItemId == item.menuItemId);
+        if (index == -1) {
+          updatedItems.add(item);
+        } else {
+          final existing = updatedItems[index];
+          updatedItems[index] = existing.copyWith(qty: existing.qty + item.qty);
+        }
+      }
+
+      final updatedTotal = updatedItems
+          .fold<double>(0, (total, element) => total + element.subtotal);
+
+      trx.update(doc, {
+        'items': updatedItems.map((item) => item.toMap()).toList(),
+        'total': updatedTotal,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
 }

@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/restaurant_table.dart';
+import 'cart_screen.dart';
 import 'menu_screen.dart';
+import 'pending_orders_screen.dart';
 
 class TableSelectScreen extends StatelessWidget {
   const TableSelectScreen({super.key});
@@ -39,6 +41,22 @@ class TableSelectScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         const Text('Visualiza disponibilidad en tiempo real'),
                       ],
+                    ),
+                    const Spacer(),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PendingOrdersScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.receipt_long),
+                      label: const Text('Pedidos'),
                     ),
                   ],
                 ),
@@ -84,14 +102,25 @@ class TableSelectScreen extends StatelessWidget {
                             return InkWell(
                               borderRadius: BorderRadius.circular(24),
                               onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => MenuScreen(
-                                      tableId: table.id,
-                                      tableNumber: table.number,
+                                if (table.status == 'occupied' &&
+                                    table.currentOrderId != null) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => CartScreen(
+                                        orderId: table.currentOrderId!,
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                } else {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => MenuScreen(
+                                        tableId: table.id,
+                                        tableNumber: table.number,
+                                      ),
+                                    ),
+                                  );
+                                }
                               },
                               child: Card(
                                 elevation: 6,
