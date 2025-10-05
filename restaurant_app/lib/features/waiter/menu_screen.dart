@@ -15,12 +15,14 @@ class MenuScreen extends StatefulWidget {
     this.tableNumber,
     this.existingOrderId,
     this.initialChannel,
+    this.allowEditingClosedOrder = false,
   });
 
   final String? tableId;
   final int? tableNumber;
   final String? existingOrderId;
   final String? initialChannel;
+  final bool allowEditingClosedOrder;
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -107,6 +109,7 @@ class _MenuScreenState extends State<MenuScreen> {
         await _orderRepository.addItemsToOrder(
           orderId: widget.existingOrderId!,
           items: List<OrderItem>.from(_cart),
+          allowClosedOrders: widget.allowEditingClosedOrder,
         );
         if (!mounted) return;
         setState(() {

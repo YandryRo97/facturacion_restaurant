@@ -126,6 +126,7 @@ class OrderRepository {
   Future<void> addItemsToOrder({
     required String orderId,
     required List<OrderItem> items,
+    bool allowClosedOrders = false,
   }) async {
     if (items.isEmpty) {
       return;
@@ -139,7 +140,7 @@ class OrderRepository {
       }
       final data = snapshot.data()!;
       final status = data['status'] as String? ?? 'open';
-      if (status != 'open') {
+      if (!allowClosedOrders && status != 'open') {
         throw StateError('El pedido ya no se puede modificar');
       }
 
@@ -177,6 +178,7 @@ class OrderRepository {
     required String orderId,
     required String menuItemId,
     required int quantity,
+    bool allowClosedOrders = false,
   }) async {
     final doc = _db.collection('orders').doc(orderId);
     await _db.runTransaction((trx) async {
@@ -186,7 +188,7 @@ class OrderRepository {
       }
       final data = snapshot.data()!;
       final status = data['status'] as String? ?? 'open';
-      if (status != 'open') {
+      if (!allowClosedOrders && status != 'open') {
         throw StateError('El pedido ya no se puede modificar');
       }
 
