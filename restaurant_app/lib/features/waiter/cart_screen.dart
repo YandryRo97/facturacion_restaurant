@@ -18,6 +18,7 @@ class CartScreen extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final isCompact = size.width < 600;
     final horizontalPadding = isCompact ? 16.0 : 24.0;
+
     return Scaffold(
       appBar: AppBar(
         title: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -26,9 +27,8 @@ class CartScreen extends StatelessWidget {
               .doc(orderId)
               .snapshots(),
           builder: (context, snapshot) {
-            final orderNumber = (snapshot.data?.data()?['orderNumber'] as num?)
-                    ?.toInt() ??
-                null;
+            final orderNumber =
+                (snapshot.data?.data()?['orderNumber'] as num?)?.toInt();
             if (orderNumber == null) {
               return Text('Pedido #$orderId');
             }
@@ -55,16 +55,20 @@ class CartScreen extends StatelessWidget {
             }
             final data = snapshot.data!.data();
             if (data == null) {
-              return const Center(child: Text('No se encontró la información del pedido.'));
+              return const Center(
+                child: Text('No se encontró la información del pedido.'),
+              );
             }
+
             final items = ((data['items'] as List?) ?? const [])
                 .map((dynamic raw) => OrderItem.fromMap(
                       Map<String, dynamic>.from(raw as Map<dynamic, dynamic>),
                     ))
                 .toList();
-            final total = (data['total'] ?? 0).toDouble();
-            final status = (data['status'] ?? 'open') as String;
-            final channel = (data['channel'] ?? 'dine-in') as String;
+
+            final total = (data['total'] as num?)?.toDouble() ?? 0.0;
+            final status = (data['status'] as String?) ?? 'open';
+            final channel = (data['channel'] as String?) ?? 'dine-in';
             final tableNumber = (data['tableNumber'] as num?)?.toInt();
             final paymentMethod = data['paymentMethod'] as String?;
 
@@ -79,13 +83,17 @@ class CartScreen extends StatelessWidget {
                 );
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pedido finalizado correctamente.')),
+                    const SnackBar(
+                      content: Text('Pedido finalizado correctamente.'),
+                    ),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No se pudo finalizar el pedido.')),
+                    const SnackBar(
+                      content: Text('No se pudo finalizar el pedido.'),
+                    ),
                   );
                 }
               }
@@ -104,7 +112,9 @@ class CartScreen extends StatelessWidget {
               );
               if (result == true && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Productos agregados al pedido.')),
+                  const SnackBar(
+                    content: Text('Productos agregados al pedido.'),
+                  ),
                 );
               }
             }
@@ -151,16 +161,19 @@ class CartScreen extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 900),
                       child: Column(
                         children: [
+                          // Resumen
                           Padding(
                             padding: EdgeInsets.all(horizontalPadding),
                             child: Card(
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: LayoutBuilder(
                                   builder: (context, contentConstraints) {
-                                    final compactHeader = contentConstraints.maxWidth < 500;
+                                    final compactHeader =
+                                        contentConstraints.maxWidth < 500;
                                     final detailsText = [
                                       if (tableNumber != null) 'Mesa #$tableNumber',
                                       'Canal: ${_channelLabel(channel)}',
@@ -168,19 +181,25 @@ class CartScreen extends StatelessWidget {
                                       if (paymentMethod != null)
                                         'Pago: ${_paymentMethodLabel(paymentMethod)}',
                                     ].join(' · ');
+
                                     final chip = Chip(
                                       backgroundColor: Colors.black,
-                                      labelStyle: const TextStyle(color: Colors.white),
+                                      labelStyle:
+                                          const TextStyle(color: Colors.white),
                                       label: Text(currencyFormat.format(total)),
                                     );
+
                                     return compactHeader
                                         ? Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Row(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  const Icon(Icons.receipt_long, size: 32),
+                                                  const Icon(Icons.receipt_long,
+                                                      size: 32),
                                                   const SizedBox(width: 12),
                                                   Expanded(
                                                     child: Column(
@@ -193,8 +212,9 @@ class CartScreen extends StatelessWidget {
                                                               .textTheme
                                                               .titleMedium
                                                               ?.copyWith(
-                                                                  fontWeight:
-                                                                      FontWeight.bold),
+                                                                fontWeight:
+                                                                    FontWeight.bold,
+                                                              ),
                                                         ),
                                                         const SizedBox(height: 4),
                                                         Text(detailsText),
@@ -209,7 +229,8 @@ class CartScreen extends StatelessWidget {
                                           )
                                         : Row(
                                             children: [
-                                              const Icon(Icons.receipt_long, size: 32),
+                                              const Icon(Icons.receipt_long,
+                                                  size: 32),
                                               const SizedBox(width: 12),
                                               Expanded(
                                                 child: Column(
@@ -222,8 +243,9 @@ class CartScreen extends StatelessWidget {
                                                           .textTheme
                                                           .titleMedium
                                                           ?.copyWith(
-                                                              fontWeight:
-                                                                  FontWeight.bold),
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Text(detailsText),
@@ -238,10 +260,13 @@ class CartScreen extends StatelessWidget {
                               ),
                             ),
                           ),
+
+                          // Lista de items
                           Expanded(
                             child: items.isEmpty
                                 ? const Center(
-                                    child: Text('Aún no hay productos en este pedido.'),
+                                    child:
+                                        Text('Aún no hay productos en este pedido.'),
                                   )
                                 : ListView.builder(
                                     padding: EdgeInsets.symmetric(
@@ -253,104 +278,109 @@ class CartScreen extends StatelessWidget {
                                       final qty = item.qty;
                                       final unit = item.unitPrice;
                                       final subtotal = item.subtotal;
+
                                       return Card(
                                         margin: const EdgeInsets.only(bottom: 16),
                                         shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(18)),
+                                          borderRadius: BorderRadius.circular(18),
+                                        ),
                                         child: ListTile(
+                                          isThreeLine: true, // ← da más alto al tile
                                           leading: CircleAvatar(
                                             backgroundColor: const Color(0xFFFFC107)
                                                 .withOpacity(.2),
                                             child: Text('${index + 1}'),
                                           ),
-                                          title: Text(item.name.isEmpty
-                                              ? 'Producto'
-                                              : item.name),
-                                          subtitle: Text(
-                                              '$qty × ${currencyFormat.format(unit)}'),
-                                          trailing: status == 'open'
-                                              ? Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.end,
-                                                  children: [
-                                                    Text(
-                                                      currencyFormat
-                                                          .format(subtotal),
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold),
+                                          title: Text(
+                                            item.name.isEmpty
+                                                ? 'Producto'
+                                                : item.name,
+                                          ),
+                                          // ✅ Botones en subtitle (sin overflow)
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '$qty × ${currencyFormat.format(unit)}',
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Wrap(
+                                                spacing: 4,
+                                                runSpacing: 4,
+                                                crossAxisAlignment:
+                                                    WrapCrossAlignment.center,
+                                                children: [
+                                                  IconButton(
+                                                    iconSize: 20,
+                                                    constraints:
+                                                        const BoxConstraints
+                                                            .tightFor(
+                                                      width: 36,
+                                                      height: 36,
                                                     ),
-                                                    const SizedBox(height: 8),
-                                                    Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        IconButton(
-                                                          tooltip:
-                                                              'Disminuir',
-                                                          onPressed: qty <= 1
-                                                              ? () =>
-                                                                  removeItem(
-                                                                      item)
-                                                              : () =>
-                                                                  updateQuantity(
-                                                                      item,
-                                                                      qty -
-                                                                          1),
-                                                          icon: const Icon(Icons
-                                                              .remove_circle_outline),
-                                                        ),
-                                                        Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal:
-                                                                      4),
-                                                          child: Text(
-                                                            '$qty',
-                                                            style: const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold),
-                                                          ),
-                                                        ),
-                                                        IconButton(
-                                                          tooltip:
-                                                              'Aumentar',
-                                                          onPressed: () =>
-                                                              updateQuantity(
-                                                                  item,
-                                                                  qty + 1),
-                                                          icon: const Icon(Icons
-                                                              .add_circle_outline),
-                                                        ),
-                                                        IconButton(
-                                                          tooltip:
-                                                              'Eliminar',
-                                                          onPressed: () =>
-                                                              removeItem(item),
-                                                          icon: const Icon(
-                                                              Icons
-                                                                  .delete_outline),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                )
-                                              : Text(
-                                                  currencyFormat
-                                                      .format(subtotal),
-                                                  style: const TextStyle(
+                                                    tooltip: 'Disminuir',
+                                                    onPressed: qty <= 1
+                                                        ? () => removeItem(item)
+                                                        : () => updateQuantity(
+                                                            item, qty - 1),
+                                                    icon: const Icon(Icons
+                                                        .remove_circle_outline),
+                                                  ),
+                                                  Text(
+                                                    '$qty',
+                                                    style: const TextStyle(
                                                       fontWeight:
-                                                          FontWeight.bold),
-                                                ),
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  IconButton(
+                                                    iconSize: 20,
+                                                    constraints:
+                                                        const BoxConstraints
+                                                            .tightFor(
+                                                      width: 36,
+                                                      height: 36,
+                                                    ),
+                                                    tooltip: 'Aumentar',
+                                                    onPressed: () =>
+                                                        updateQuantity(
+                                                            item, qty + 1),
+                                                    icon: const Icon(Icons
+                                                        .add_circle_outline),
+                                                  ),
+                                                  IconButton(
+                                                    iconSize: 20,
+                                                    constraints:
+                                                        const BoxConstraints
+                                                            .tightFor(
+                                                      width: 36,
+                                                      height: 36,
+                                                    ),
+                                                    tooltip: 'Eliminar',
+                                                    onPressed: () =>
+                                                        removeItem(item),
+                                                    icon: const Icon(
+                                                        Icons.delete_outline),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          // Solo total aquí
+                                          trailing: Text(
+                                            currencyFormat.format(subtotal),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                         ),
                                       );
                                     },
                                   ),
                           ),
+
+                          // Acciones finales
                           if (status == 'open')
                             Padding(
                               padding: EdgeInsets.fromLTRB(
@@ -361,7 +391,8 @@ class CartScreen extends StatelessWidget {
                               ),
                               child: isCompact
                                   ? Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
                                       children: [
                                         OutlinedButton.icon(
                                           onPressed: addMoreItems,
@@ -371,8 +402,10 @@ class CartScreen extends StatelessWidget {
                                         const SizedBox(height: 12),
                                         FilledButton.icon(
                                           onPressed: finalizeOrder,
-                                          icon: const Icon(Icons.check_circle_outline),
-                                          label: const Text('Finalizar pedido'),
+                                          icon: const Icon(
+                                              Icons.check_circle_outline),
+                                          label:
+                                              const Text('Finalizar pedido'),
                                           style: FilledButton.styleFrom(
                                             backgroundColor: Colors.black,
                                             foregroundColor: Colors.white,
@@ -386,16 +419,18 @@ class CartScreen extends StatelessWidget {
                                           child: OutlinedButton.icon(
                                             onPressed: addMoreItems,
                                             icon: const Icon(Icons.playlist_add),
-                                            label: const Text('Agregar productos'),
+                                            label:
+                                                const Text('Agregar productos'),
                                           ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: FilledButton.icon(
                                             onPressed: finalizeOrder,
-                                            icon:
-                                                const Icon(Icons.check_circle_outline),
-                                            label: const Text('Finalizar pedido'),
+                                            icon: const Icon(
+                                                Icons.check_circle_outline),
+                                            label:
+                                                const Text('Finalizar pedido'),
                                             style: FilledButton.styleFrom(
                                               backgroundColor: Colors.black,
                                               foregroundColor: Colors.white,
