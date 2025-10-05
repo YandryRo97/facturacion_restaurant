@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/order.dart';
 import '../../repositories/order_repository.dart';
 import 'menu_screen.dart';
 
@@ -56,7 +57,11 @@ class CartScreen extends StatelessWidget {
             if (data == null) {
               return const Center(child: Text('No se encontró la información del pedido.'));
             }
-            final items = (data['items'] as List).cast<Map<String, dynamic>>();
+            final items = ((data['items'] as List?) ?? const [])
+                .map((dynamic raw) => OrderItem.fromMap(
+                      Map<String, dynamic>.from(raw as Map<dynamic, dynamic>),
+                    ))
+                .toList();
             final total = (data['total'] ?? 0).toDouble();
             final status = (data['status'] ?? 'open') as String;
             final channel = (data['channel'] ?? 'dine-in') as String;
@@ -102,6 +107,40 @@ class CartScreen extends StatelessWidget {
                   const SnackBar(content: Text('Productos agregados al pedido.')),
                 );
               }
+            }
+
+            Future<void> updateQuantity(OrderItem item, int newQty) async {
+              try {
+                await _orderRepository.updateOrderItemQuantity(
+                  orderId: orderId,
+                  menuItemId: item.menuItemId,
+                  quantity: newQty,
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      newQty <= 0
+                          ? 'No se pudo eliminar el producto.'
+                          : 'No se pudo actualizar la cantidad.',
+                    ),
+                  ),
+                );
+                rethrow;
+              }
+            }
+
+            Future<void> removeItem(OrderItem item) async {
+              try {
+                await updateQuantity(item, 0);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${item.name} eliminado del pedido.'),
+                  ),
+                );
+              } catch (_) {}
             }
 
             return SafeArea(
@@ -211,10 +250,9 @@ class CartScreen extends StatelessWidget {
                                     itemCount: items.length,
                                     itemBuilder: (context, index) {
                                       final item = items[index];
-                                      final qty = (item['qty'] as num).toInt();
-                                      final unit = (item['unitPrice'] as num).toDouble();
-                                      final subtotal =
-                                          (item['subtotal'] as num).toDouble();
+                                      final qty = item.qty;
+                                      final unit = item.unitPrice;
+                                      final subtotal = item.subtotal;
                                       return Card(
                                         margin: const EdgeInsets.only(bottom: 16),
                                         shape: RoundedRectangleBorder(
@@ -225,15 +263,89 @@ class CartScreen extends StatelessWidget {
                                                 .withOpacity(.2),
                                             child: Text('${index + 1}'),
                                           ),
-                                          title: Text(
-                                              item['name'] as String? ?? 'Producto'),
+                                          title: Text(item.name.isEmpty
+                                              ? 'Producto'
+                                              : item.name),
                                           subtitle: Text(
                                               '$qty × ${currencyFormat.format(unit)}'),
-                                          trailing: Text(
-                                            currencyFormat.format(subtotal),
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold),
-                                          ),
+                                          trailing: status == 'open'
+                                              ? Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  children: [
+                                                    Text(
+                                                      currencyFormat
+                                                          .format(subtotal),
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        IconButton(
+                                                          tooltip:
+                                                              'Disminuir',
+                                                          onPressed: qty <= 1
+                                                              ? () =>
+                                                                  removeItem(
+                                                                      item)
+                                                              : () =>
+                                                                  updateQuantity(
+                                                                      item,
+                                                                      qty -
+                                                                          1),
+                                                          icon: const Icon(Icons
+                                                              .remove_circle_outline),
+                                                        ),
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      4),
+                                                          child: Text(
+                                                            '$qty',
+                                                            style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold),
+                                                          ),
+                                                        ),
+                                                        IconButton(
+                                                          tooltip:
+                                                              'Aumentar',
+                                                          onPressed: () =>
+                                                              updateQuantity(
+                                                                  item,
+                                                                  qty + 1),
+                                                          icon: const Icon(Icons
+                                                              .add_circle_outline),
+                                                        ),
+                                                        IconButton(
+                                                          tooltip:
+                                                              'Eliminar',
+                                                          onPressed: () =>
+                                                              removeItem(item),
+                                                          icon: const Icon(
+                                                              Icons
+                                                                  .delete_outline),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                )
+                                              : Text(
+                                                  currencyFormat
+                                                      .format(subtotal),
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                                ),
                                         ),
                                       );
                                     },

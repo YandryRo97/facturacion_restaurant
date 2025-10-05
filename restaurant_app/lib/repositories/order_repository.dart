@@ -172,4 +172,51 @@ class OrderRepository {
       });
     });
   }
+
+  Future<void> updateOrderItemQuantity({
+    required String orderId,
+    required String menuItemId,
+    required int quantity,
+  }) async {
+    final doc = _db.collection('orders').doc(orderId);
+    await _db.runTransaction((trx) async {
+      final snapshot = await trx.get(doc);
+      if (!snapshot.exists) {
+        throw StateError('El pedido no existe');
+      }
+      final data = snapshot.data()!;
+      final status = data['status'] as String? ?? 'open';
+      if (status != 'open') {
+        throw StateError('El pedido ya no se puede modificar');
+      }
+
+      final rawItems = (data['items'] as List?) ?? const [];
+      final currentItems = rawItems
+          .map((dynamic item) => OrderItem.fromMap(
+                Map<String, dynamic>.from(item as Map<dynamic, dynamic>),
+              ))
+          .toList();
+
+      final index = currentItems
+          .indexWhere((element) => element.menuItemId == menuItemId);
+      if (index == -1) {
+        throw StateError('El producto no existe en el pedido');
+      }
+
+      if (quantity <= 0) {
+        currentItems.removeAt(index);
+      } else {
+        currentItems[index] = currentItems[index].copyWith(qty: quantity);
+      }
+
+      final updatedTotal = currentItems
+          .fold<double>(0, (total, element) => total + element.subtotal);
+
+      trx.update(doc, {
+        'items': currentItems.map((item) => item.toMap()).toList(),
+        'total': updatedTotal,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
 }
