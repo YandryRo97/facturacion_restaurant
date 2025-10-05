@@ -66,6 +66,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     double dineInTotal = 0;
     double onlineTotal = 0;
     final Map<String, _DailySummary> daily = {};
+    final Map<String, _PaymentSummary> paymentMethodSummaries = {};
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
@@ -76,6 +77,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       final total = (data['total'] as num?)?.toDouble() ?? 0;
       final channel = (data['channel'] as String?) ?? 'dine-in';
+      final paymentMethod =
+          ((data['paymentMethod'] as String?)?.isNotEmpty ?? false)
+              ? data['paymentMethod'] as String
+              : 'unknown';
       final closedAt = (data['closedAt'] as Timestamp?)?.toDate()
           // fallback solo para cálculo de día, pero OJO: si no hay closedAt no entra en la query
           ?? (data['createdAt'] as Timestamp?)?.toDate();
@@ -84,6 +89,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final dayKey = DateFormat('yyyy-MM-dd').format(closedAt);
 
       totalSales += total;
+      paymentMethodSummaries.update(
+        paymentMethod,
+        (value) => value.accumulate(total),
+        ifAbsent: () => _PaymentSummary(total: total, orders: 1),
+      );
       if (channel == 'dine-in') {
         dineInTotal += total;
       } else {
@@ -99,6 +109,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               channel == 'dine-in' ? value.dineInTotal + total : value.dineInTotal,
           onlineTotal:
               channel == 'online' ? value.onlineTotal + total : value.onlineTotal,
+          paymentMethodSummaries:
+              _updateDailyPaymentMap(value.paymentMethodSummaries, paymentMethod, total),
         ),
         ifAbsent: () => _DailySummary(
           date: DateFormat('yyyy-MM-dd').parse(dayKey),
@@ -106,6 +118,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ordersCount: 1,
           dineInTotal: channel == 'dine-in' ? total : 0,
           onlineTotal: channel == 'online' ? total : 0,
+          paymentMethodSummaries: Map.unmodifiable({
+            paymentMethod: _PaymentSummary(total: total, orders: 1),
+          }),
         ),
       );
     }
@@ -118,8 +133,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ordersCount: daily.values.fold<int>(0, (acc, d) => acc + d.ordersCount),
       dineInTotal: dineInTotal,
       onlineTotal: onlineTotal,
+      paymentMethodSummaries: Map.unmodifiable(paymentMethodSummaries),
       dailySummaries: dailySummaries,
     );
+  }
+
+  Map<String, _PaymentSummary> _updateDailyPaymentMap(
+    Map<String, _PaymentSummary> current,
+    String method,
+    double amount,
+  ) {
+    final updated = Map<String, _PaymentSummary>.from(current);
+    final existing = updated[method];
+    if (existing != null) {
+      updated[method] = existing.accumulate(amount);
+    } else {
+      updated[method] = _PaymentSummary(total: amount, orders: 1);
+    }
+    return Map.unmodifiable(updated);
   }
 
   @override
@@ -189,6 +220,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ordersCount: 0,
                       dineInTotal: 0,
                       onlineTotal: 0,
+                      paymentMethodSummaries: {},
                       dailySummaries: [],
                     );
 
@@ -250,6 +282,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
+                    if (data.paymentMethodSummaries.isNotEmpty) ...[
+                      Text(
+                        'Cuadre por método de pago',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: (data.paymentMethodSummaries.entries
+                                    .toList()
+                                  ..sort((a, b) => _paymentMethodLabel(a.key)
+                                      .compareTo(_paymentMethodLabel(b.key))))
+                              .map((entry) {
+                            final label = _paymentMethodLabel(entry.key);
+                            final icon = _paymentMethodIcon(entry.key);
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primaryContainer,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimaryContainer,
+                                child: Icon(icon),
+                              ),
+                              title: Text(label),
+                              subtitle: Text('Pedidos: ${entry.value.orders}'),
+                              trailing: Text(
+                                _currencyFormat.format(entry.value.total),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     Text(
                       'Desglose diario',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -264,6 +336,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final summary = data.dailySummaries[index];
+                        final paymentDescription = (summary
+                                    .paymentMethodSummaries.entries
+                                .toList()
+                              ..sort((a, b) => _paymentMethodLabel(a.key)
+                                  .compareTo(_paymentMethodLabel(b.key))))
+                            .map((entry) =>
+                                '${_paymentMethodLabel(entry.key)}: ${_currencyFormat.format(entry.value.total)}')
+                            .join(' · ');
                         return Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -278,8 +358,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 DateFormat('EEEE d MMMM', 'es')
                                     .format(summary.date),
                             ),
-                            subtitle: Text(
-                              'Pedidos: ${summary.ordersCount} · Salón: ${_currencyFormat.format(summary.dineInTotal)} · Online: ${_currencyFormat.format(summary.onlineTotal)}',
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Pedidos: ${summary.ordersCount} · Salón: ${_currencyFormat.format(summary.dineInTotal)} · Online: ${_currencyFormat.format(summary.onlineTotal)}',
+                                ),
+                                if (paymentDescription.isNotEmpty)
+                                  Text('Pagos: $paymentDescription'),
+                              ],
                             ),
                             trailing: Text(
                               _currencyFormat.format(summary.totalSales),
@@ -356,6 +444,7 @@ class _ReportData {
     required this.ordersCount,
     required this.dineInTotal,
     required this.onlineTotal,
+    required this.paymentMethodSummaries,
     required this.dailySummaries,
   });
 
@@ -363,6 +452,7 @@ class _ReportData {
   final int ordersCount;
   final double dineInTotal;
   final double onlineTotal;
+  final Map<String, _PaymentSummary> paymentMethodSummaries;
   final List<_DailySummary> dailySummaries;
 }
 
@@ -373,6 +463,7 @@ class _DailySummary {
     required this.ordersCount,
     required this.dineInTotal,
     required this.onlineTotal,
+    required this.paymentMethodSummaries,
   });
 
   final DateTime date;
@@ -380,12 +471,14 @@ class _DailySummary {
   final int ordersCount;
   final double dineInTotal;
   final double onlineTotal;
+  final Map<String, _PaymentSummary> paymentMethodSummaries;
 
   _DailySummary copyWith({
     double? totalSales,
     int? ordersCount,
     double? dineInTotal,
     double? onlineTotal,
+    Map<String, _PaymentSummary>? paymentMethodSummaries,
   }) {
     return _DailySummary(
       date: date,
@@ -393,6 +486,54 @@ class _DailySummary {
       ordersCount: ordersCount ?? this.ordersCount,
       dineInTotal: dineInTotal ?? this.dineInTotal,
       onlineTotal: onlineTotal ?? this.onlineTotal,
+      paymentMethodSummaries: paymentMethodSummaries != null
+          ? Map.unmodifiable(paymentMethodSummaries)
+          : this.paymentMethodSummaries,
     );
+  }
+}
+
+class _PaymentSummary {
+  const _PaymentSummary({
+    required this.total,
+    required this.orders,
+  });
+
+  final double total;
+  final int orders;
+
+  _PaymentSummary accumulate(double amount) {
+    return _PaymentSummary(
+      total: total + amount,
+      orders: orders + 1,
+    );
+  }
+}
+
+String _paymentMethodLabel(String method) {
+  switch (method) {
+    case 'cash':
+      return 'Efectivo';
+    case 'card':
+      return 'Tarjeta';
+    case 'other':
+      return 'Otro';
+    case 'unknown':
+      return 'No especificado';
+    default:
+      return method;
+  }
+}
+
+IconData _paymentMethodIcon(String method) {
+  switch (method) {
+    case 'cash':
+      return Icons.attach_money;
+    case 'card':
+      return Icons.credit_card;
+    case 'other':
+      return Icons.payments_outlined;
+    default:
+      return Icons.help_outline;
   }
 }
