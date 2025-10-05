@@ -15,6 +15,7 @@ class PendingOrdersScreen extends StatelessWidget {
     final isCompact = size.width < 600;
     final horizontalPadding = isCompact ? 16.0 : 24.0;
     final topPadding = isCompact ? 16.0 : 20.0;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -32,6 +33,7 @@ class PendingOrdersScreen extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 900),
                   child: Column(
                     children: [
+                      // Header
                       Padding(
                         padding: EdgeInsets.fromLTRB(
                           horizontalPadding,
@@ -62,6 +64,8 @@ class PendingOrdersScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+
+                      // Body
                       Expanded(
                         child: ClipRRect(
                           borderRadius: const BorderRadius.only(
@@ -74,20 +78,25 @@ class PendingOrdersScreen extends StatelessWidget {
                               stream: FirebaseFirestore.instance
                                   .collection('orders')
                                   .where('status', isEqualTo: 'open')
-                                  .orderBy('createdAt', descending: true)
+                                  // Si quieres ordenar en la query, agrega orderBy y crea índice si te lo pide:
+                                  // .orderBy('createdAt', descending: true)
                                   .snapshots(),
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState == ConnectionState.waiting) {
                                   return const Center(child: CircularProgressIndicator());
                                 }
                                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                                  return const Center(
-                                    child: Text('No hay pedidos pendientes.'),
-                                  );
+                                  return const Center(child: Text('No hay pedidos pendientes.'));
                                 }
+
+                                // Mapear y ORDENAR EN MEMORIA para evitar índice compuesto
                                 final orders = snapshot.data!.docs
                                     .map((doc) => OrderModel.fromMap(doc.id, doc.data()))
-                                    .toList();
+                                    .toList()
+                                  ..sort(
+                                    (a, b) => b.createdAt.compareTo(a.createdAt),
+                                  );
+
                                 return ListView.builder(
                                   padding: EdgeInsets.fromLTRB(
                                     horizontalPadding,
@@ -98,60 +107,63 @@ class PendingOrdersScreen extends StatelessWidget {
                                   itemCount: orders.length,
                                   itemBuilder: (context, index) {
                                     final order = orders[index];
+
                                     final subtitleParts = <String>[
                                       if (order.tableNumber != null)
-                                'Mesa #${order.tableNumber}'
-                              else
-                                'Pedido online',
-                              'Canal: ${_channelLabel(order.channel)}',
-                              'Creado: ${DateFormat.Hm().format(order.createdAt)}',
-                            ];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: ListTile(
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => CartScreen(orderId: order.id),
-                                    ),
-                                  );
-                                },
-                                leading: CircleAvatar(
-                                  backgroundColor: const Color(0xFFFFC107).withOpacity(.18),
-                                  foregroundColor: Colors.black,
-                                  child: Text('#${order.orderNumber}'),
-                                ),
-                                title: Text(
-                                  order.items.isEmpty
-                                      ? 'Pedido sin productos'
-                                      : order.items.first.name,
-                                ),
-                                subtitle: Text(subtitleParts.join(' · ')),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      currencyFormat.format(order.total),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                        'Mesa #${order.tableNumber}'
+                                      else
+                                        'Pedido online',
+                                      'Canal: ${_channelLabel(order.channel)}',
+                                      'Creado: ${DateFormat.Hm().format(order.createdAt)}',
+                                    ];
+
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      'Ver detalles',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                                  );
-                                },
-                              ),
+                                      child: ListTile(
+                                        onTap: () {
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) => CartScreen(orderId: order.id),
+                                            ),
+                                          );
+                                        },
+                                        leading: CircleAvatar(
+                                          backgroundColor: const Color(0xFFFFC107).withOpacity(.18),
+                                          foregroundColor: Colors.black,
+                                          child: Text('#${order.orderNumber}'),
+                                        ),
+                                        title: Text(
+                                          order.items.isEmpty
+                                              ? 'Pedido sin productos'
+                                              : order.items.first.name,
+                                        ),
+                                        subtitle: Text(subtitleParts.join(' · ')),
+                                        trailing: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              currencyFormat.format(order.total),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            const Text(
+                                              'Ver detalles',
+                                              style: TextStyle(fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
                             ),
                           ),
                         ),
