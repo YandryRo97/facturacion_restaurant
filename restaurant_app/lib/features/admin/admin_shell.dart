@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'completed_orders_screen.dart';
 import 'dashboard_screen.dart';
 import 'expense_management_screen.dart';
 import 'menu_management_screen.dart';
@@ -18,6 +19,7 @@ class _AdminShellState extends State<AdminShell> {
 
   final _pages = const [
     DashboardScreen(),
+    CompletedOrdersScreen(),
     ReportsScreen(),
     ExpenseManagementScreen(),
     TableManagementScreen(),
@@ -26,6 +28,7 @@ class _AdminShellState extends State<AdminShell> {
 
   final _titles = const [
     'Panel de control',
+    'Pedidos',
     'Reportes',
     'Gastos',
     'Mesas',
@@ -113,6 +116,11 @@ class _AdminShellState extends State<AdminShell> {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard, color: Colors.white),
             label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long, color: Colors.white),
+            label: 'Pedidos',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
