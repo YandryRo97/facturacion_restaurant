@@ -187,311 +187,344 @@ class CartScreen extends StatelessWidget {
                           constraints: const BoxConstraints(maxWidth: 900),
                           child: Column(
                             children: [
-                          // Resumen
-                          Padding(
-                            padding: EdgeInsets.all(horizontalPadding),
-                            child: Card(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: LayoutBuilder(
-                                  builder: (context, contentConstraints) {
-                                    final compactHeader =
-                                        contentConstraints.maxWidth < 500;
-                                    final detailsText = [
-                                      if (tableNumber != null) 'Mesa #$tableNumber',
-                                      'Canal: ${_channelLabel(channel)}',
-                                      'Estado: ${_statusLabel(status)}',
-                                      if (paymentMethod != null)
-                                        'Pago: ${_paymentMethodLabel(paymentMethod)}',
-                                    ].join(' · ');
+                              // Resumen
+                              Padding(
+                                padding: EdgeInsets.all(horizontalPadding),
+                                child: Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: LayoutBuilder(
+                                      builder:
+                                          (context, contentConstraints) {
+                                        final compactHeader =
+                                            contentConstraints.maxWidth < 500;
+                                        final detailsText = [
+                                          if (tableNumber != null)
+                                            'Mesa #$tableNumber',
+                                          'Canal: ${_channelLabel(channel)}',
+                                          'Estado: ${_statusLabel(status)}',
+                                          if (paymentMethod != null)
+                                            'Pago: ${_paymentMethodLabel(paymentMethod)}',
+                                        ].join(' · ');
 
-                                    final chip = Chip(
-                                      backgroundColor: Colors.black,
-                                      labelStyle:
-                                          const TextStyle(color: Colors.white),
-                                      label: Text(currencyFormat.format(total)),
-                                    );
+                                        final chip = Chip(
+                                          backgroundColor: Colors.black,
+                                          labelStyle: const TextStyle(
+                                              color: Colors.white),
+                                          label: Text(
+                                              currencyFormat.format(total)),
+                                        );
 
-                                    return compactHeader
-                                        ? Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
+                                        return compactHeader
+                                            ? Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
                                                 children: [
-                                                  const Icon(Icons.receipt_long,
+                                                  Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.receipt_long,
+                                                          size: 32),
+                                                      const SizedBox(
+                                                          width: 12),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              'Resumen del pedido',
+                                                              style: Theme.of(
+                                                                      context)
+                                                                  .textTheme
+                                                                  .titleMedium
+                                                                  ?.copyWith(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                  ),
+                                                            ),
+                                                            const SizedBox(
+                                                                height: 4),
+                                                            Text(detailsText),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 12),
+                                                  chip,
+                                                ],
+                                              )
+                                            : Row(
+                                                children: [
+                                                  const Icon(
+                                                      Icons.receipt_long,
                                                       size: 32),
                                                   const SizedBox(width: 12),
                                                   Expanded(
                                                     child: Column(
                                                       crossAxisAlignment:
-                                                          CrossAxisAlignment.start,
+                                                          CrossAxisAlignment
+                                                              .start,
                                                       children: [
                                                         Text(
                                                           'Resumen del pedido',
-                                                          style: Theme.of(context)
+                                                          style: Theme.of(
+                                                                  context)
                                                               .textTheme
                                                               .titleMedium
                                                               ?.copyWith(
                                                                 fontWeight:
-                                                                    FontWeight.bold,
+                                                                    FontWeight
+                                                                        .bold,
                                                               ),
                                                         ),
-                                                        const SizedBox(height: 4),
+                                                        const SizedBox(
+                                                            height: 4),
                                                         Text(detailsText),
                                                       ],
                                                     ),
                                                   ),
+                                                  chip,
                                                 ],
-                                              ),
-                                              const SizedBox(height: 12),
-                                              chip,
-                                            ],
-                                          )
-                                        : Row(
-                                            children: [
-                                              const Icon(Icons.receipt_long,
-                                                  size: 32),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      'Resumen del pedido',
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .titleMedium
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          ),
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(detailsText),
-                                                  ],
-                                                ),
-                                              ),
-                                              chip,
-                                            ],
-                                          );
-                                  },
+                                              );
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
 
-                          // Lista de items
-                          Expanded(
-                            child: items.isEmpty
-                                ? const Center(
-                                    child:
-                                        Text('Aún no hay productos en este pedido.'),
-                                  )
-                                : ListView.builder(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: horizontalPadding,
-                                    ),
-                                    itemCount: items.length,
-                                    itemBuilder: (context, index) {
-                                      final item = items[index];
-                                      final qty = item.qty;
-                                      final unit = item.unitPrice;
-                                      final subtotal = item.subtotal;
-
-                                      return Card(
-                                        margin: const EdgeInsets.only(bottom: 16),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(18),
+                              // Lista de items
+                              Expanded(
+                                child: items.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                            'Aún no hay productos en este pedido.'),
+                                      )
+                                    : ListView.builder(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: horizontalPadding,
                                         ),
-                                        child: ListTile(
-                                          isThreeLine: true, // ← da más alto al tile
-                                          leading: CircleAvatar(
-                                            backgroundColor: const Color(0xFFFFC107)
-                                                .withOpacity(.2),
-                                            child: Text('${index + 1}'),
-                                          ),
-                                          title: Text(
-                                            item.name.isEmpty
-                                                ? 'Producto'
-                                                : item.name,
-                                          ),
-                                          // ✅ Botones en subtitle (sin overflow)
-                                          subtitle: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '$qty × ${currencyFormat.format(unit)}',
+                                        itemCount: items.length,
+                                        itemBuilder: (context, index) {
+                                          final item = items[index];
+                                          final qty = item.qty;
+                                          final unit = item.unitPrice;
+                                          final subtotal = item.subtotal;
+
+                                          return Card(
+                                            margin: const EdgeInsets.only(
+                                                bottom: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                            ),
+                                            child: ListTile(
+                                              isThreeLine:
+                                                  true, // ← da más alto al tile
+                                              leading: CircleAvatar(
+                                                backgroundColor:
+                                                    const Color(0xFFFFC107)
+                                                        .withOpacity(.2),
+                                                child:
+                                                    Text('${index + 1}'),
                                               ),
-                                              const SizedBox(height: 8),
-                                              Wrap(
-                                                spacing: 4,
-                                                runSpacing: 4,
+                                              title: Text(
+                                                item.name.isEmpty
+                                                    ? 'Producto'
+                                                    : item.name,
+                                              ),
+                                              // ✅ Botones en subtitle (sin overflow)
+                                              subtitle: Column(
                                                 crossAxisAlignment:
-                                                    WrapCrossAlignment.center,
+                                                    CrossAxisAlignment.start,
                                                 children: [
-                                                  IconButton(
-                                                    iconSize: 20,
-                                                    constraints:
-                                                        const BoxConstraints
-                                                            .tightFor(
-                                                      width: 36,
-                                                      height: 36,
-                                                    ),
-                                                    tooltip: 'Disminuir',
-                                                    onPressed: !canModifyOrder
-                                                        ? null
-                                                        : qty <= 1
-                                                            ? () =>
-                                                                removeItem(item)
-                                                            : () =>
-                                                                updateQuantity(
+                                                  Text(
+                                                    '$qty × ${currencyFormat.format(unit)}',
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Wrap(
+                                                    spacing: 4,
+                                                    runSpacing: 4,
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .center,
+                                                    children: [
+                                                      IconButton(
+                                                        iconSize: 20,
+                                                        constraints:
+                                                            const BoxConstraints
+                                                                .tightFor(
+                                                          width: 36,
+                                                          height: 36,
+                                                        ),
+                                                        tooltip: 'Disminuir',
+                                                        onPressed: !canModifyOrder
+                                                            ? null
+                                                            : qty <= 1
+                                                                ? () => removeItem(
+                                                                    item)
+                                                                : () => updateQuantity(
                                                                     item,
                                                                     qty - 1),
-                                                    icon: const Icon(Icons
-                                                        .remove_circle_outline),
-                                                  ),
-                                                  Text(
-                                                    '$qty',
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  IconButton(
-                                                    iconSize: 20,
-                                                    constraints:
-                                                        const BoxConstraints
-                                                            .tightFor(
-                                                      width: 36,
-                                                      height: 36,
-                                                    ),
-                                                    tooltip: 'Aumentar',
-                                                    onPressed: !canModifyOrder
-                                                        ? null
-                                                        : () =>
-                                                            updateQuantity(item,
+                                                        icon: const Icon(Icons
+                                                            .remove_circle_outline),
+                                                      ),
+                                                      Text(
+                                                        '$qty',
+                                                        style:
+                                                            const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        iconSize: 20,
+                                                        constraints:
+                                                            const BoxConstraints
+                                                                .tightFor(
+                                                          width: 36,
+                                                          height: 36,
+                                                        ),
+                                                        tooltip: 'Aumentar',
+                                                        onPressed: !canModifyOrder
+                                                            ? null
+                                                            : () => updateQuantity(
+                                                                item,
                                                                 qty + 1),
-                                                    icon: const Icon(Icons
-                                                        .add_circle_outline),
-                                                  ),
-                                                  IconButton(
-                                                    iconSize: 20,
-                                                    constraints:
-                                                        const BoxConstraints
-                                                            .tightFor(
-                                                      width: 36,
-                                                      height: 36,
-                                                    ),
-                                                    tooltip: 'Eliminar',
-                                                    onPressed: !canModifyOrder
-                                                        ? null
-                                                        : () =>
-                                                            removeItem(item),
-                                                    icon: const Icon(
-                                                        Icons.delete_outline),
+                                                        icon: const Icon(Icons
+                                                            .add_circle_outline),
+                                                      ),
+                                                      IconButton(
+                                                        iconSize: 20,
+                                                        constraints:
+                                                            const BoxConstraints
+                                                                .tightFor(
+                                                          width: 36,
+                                                          height: 36,
+                                                        ),
+                                                        tooltip: 'Eliminar',
+                                                        onPressed: !canModifyOrder
+                                                            ? null
+                                                            : () => removeItem(
+                                                                item),
+                                                        icon: const Icon(Icons
+                                                            .delete_outline),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
-                                            ],
-                                          ),
-                                          // Solo total aquí
-                                          trailing: Text(
-                                            currencyFormat.format(subtotal),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                          ),
-
-                          // Acciones finales
-                          if (canModifyOrder)
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                horizontalPadding,
-                                0,
-                                horizontalPadding,
-                                isCompact ? 16 : 20,
-                              ),
-                              child: isCompact
-                                  ? Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        OutlinedButton.icon(
-                                          onPressed: canModifyOrder
-                                              ? addMoreItems
-                                              : null,
-                                          icon: const Icon(Icons.playlist_add),
-                                          label: const Text('Agregar productos'),
-                                        ),
-                                        if (status == 'open') ...[
-                                          const SizedBox(height: 12),
-                                          FilledButton.icon(
-                                            onPressed: finalizeOrder,
-                                            icon: const Icon(
-                                                Icons.check_circle_outline),
-                                            label:
-                                                const Text('Finalizar pedido'),
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: Colors.black,
-                                              foregroundColor: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    )
-                                  : Row(
-                                      children: [
-                                        Expanded(
-                                          child: OutlinedButton.icon(
-                                            onPressed: canModifyOrder
-                                                ? addMoreItems
-                                                : null,
-                                            icon: const Icon(Icons.playlist_add),
-                                            label:
-                                                const Text('Agregar productos'),
-                                          ),
-                                        ),
-                                        if (status == 'open') ...[
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: FilledButton.icon(
-                                              onPressed: finalizeOrder,
-                                              icon: const Icon(
-                                                  Icons.check_circle_outline),
-                                              label: const Text(
-                                                  'Finalizar pedido'),
-                                              style: FilledButton.styleFrom(
-                                                backgroundColor: Colors.black,
-                                                foregroundColor: Colors.white,
+                                              // Solo total aquí
+                                              trailing: Text(
+                                                currencyFormat
+                                                    .format(subtotal),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        ),
+                                          );
+                                        },
+                                      ),
+                              ),
+
+                              // Acciones finales
+                              if (canModifyOrder)
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    horizontalPadding,
+                                    0,
+                                    horizontalPadding,
+                                    isCompact ? 16 : 20,
+                                  ),
+                                  child: isCompact
+                                      ? Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            OutlinedButton.icon(
+                                              onPressed: canModifyOrder
+                                                  ? addMoreItems
+                                                  : null,
+                                              icon: const Icon(
+                                                  Icons.playlist_add),
+                                              label: const Text(
+                                                  'Agregar productos'),
+                                            ),
+                                            if (status == 'open') ...[
+                                              const SizedBox(height: 12),
+                                              FilledButton.icon(
+                                                onPressed: finalizeOrder,
+                                                icon: const Icon(Icons
+                                                    .check_circle_outline),
+                                                label: const Text(
+                                                    'Finalizar pedido'),
+                                                style:
+                                                    FilledButton.styleFrom(
+                                                  backgroundColor:
+                                                      Colors.black,
+                                                  foregroundColor:
+                                                      Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        )
+                                      : Row(
+                                          children: [
+                                            Expanded(
+                                              child: OutlinedButton.icon(
+                                                onPressed: canModifyOrder
+                                                    ? addMoreItems
+                                                    : null,
+                                                icon: const Icon(
+                                                    Icons.playlist_add),
+                                                label: const Text(
+                                                    'Agregar productos'),
+                                              ),
+                                            ),
+                                            if (status == 'open') ...[
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: FilledButton.icon(
+                                                  onPressed: finalizeOrder,
+                                                  icon: const Icon(Icons
+                                                      .check_circle_outline),
+                                                  label: const Text(
+                                                      'Finalizar pedido'),
+                                                  style: FilledButton
+                                                      .styleFrom(
+                                                    backgroundColor:
+                                                        Colors.black,
+                                                    foregroundColor:
+                                                        Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }
