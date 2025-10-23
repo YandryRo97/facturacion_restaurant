@@ -21,6 +21,65 @@ class OrderRepository {
     return lastNumber.toInt() + 1;
   }
 
+  DateTime _resolveSummaryDate(Map<String, dynamic> orderData) {
+    final closedAt = orderData['closedAt'];
+    if (closedAt is Timestamp) {
+      return closedAt.toDate();
+    }
+    final createdAt = orderData['createdAt'];
+    if (createdAt is Timestamp) {
+      return createdAt.toDate();
+    }
+    return DateTime.now();
+  }
+
+  void _applyPaidOrderDelta({
+    required Transaction trx,
+    required Map<String, dynamic> orderData,
+    required double delta,
+  }) {
+    if (delta == 0) {
+      return;
+    }
+    final channel = (orderData['channel'] as String?) ?? 'dine-in';
+    final referenceDate = _resolveSummaryDate(orderData);
+    final dayId =
+        '${referenceDate.year.toString().padLeft(4, '0')}-${referenceDate.month.toString().padLeft(2, '0')}-${referenceDate.day.toString().padLeft(2, '0')}';
+    final monthId =
+        '${referenceDate.year.toString().padLeft(4, '0')}-${referenceDate.month.toString().padLeft(2, '0')}';
+    final dailyRef =
+        _db.collection('summaries').doc('daily').collection('docs').doc(dayId);
+    final monthlyRef = _db
+        .collection('summaries')
+        .doc('monthly')
+        .collection('docs')
+        .doc(monthId);
+    final dineInDelta = channel == 'dine-in' ? delta : 0;
+    final onlineDelta = channel == 'online' ? delta : 0;
+    trx.set(
+      dailyRef,
+      {
+        'salesTotal': FieldValue.increment(delta),
+        if (dineInDelta != 0)
+          'dineInTotal': FieldValue.increment(dineInDelta),
+        if (onlineDelta != 0)
+          'onlineTotal': FieldValue.increment(onlineDelta),
+      },
+      SetOptions(merge: true),
+    );
+    trx.set(
+      monthlyRef,
+      {
+        'salesTotal': FieldValue.increment(delta),
+        if (dineInDelta != 0)
+          'dineInTotal': FieldValue.increment(dineInDelta),
+        if (onlineDelta != 0)
+          'onlineTotal': FieldValue.increment(onlineDelta),
+      },
+      SetOptions(merge: true),
+    );
+  }
+
   Future<String> createOrder({
     required String waiterId,
     String? tableId,
@@ -165,12 +224,22 @@ class OrderRepository {
 
       final updatedTotal = updatedItems
           .fold<double>(0, (total, element) => total + element.subtotal);
+      final previousTotal = (data['total'] as num?)?.toDouble() ?? 0;
+      final delta = updatedTotal - previousTotal;
 
       trx.update(doc, {
         'items': updatedItems.map((item) => item.toMap()).toList(),
         'total': updatedTotal,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      if (status == 'paid' && delta != 0) {
+        _applyPaidOrderDelta(
+          trx: trx,
+          orderData: data,
+          delta: delta,
+        );
+      }
     });
   }
 
@@ -213,12 +282,22 @@ class OrderRepository {
 
       final updatedTotal = currentItems
           .fold<double>(0, (total, element) => total + element.subtotal);
+      final previousTotal = (data['total'] as num?)?.toDouble() ?? 0;
+      final delta = updatedTotal - previousTotal;
 
       trx.update(doc, {
         'items': currentItems.map((item) => item.toMap()).toList(),
         'total': updatedTotal,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      if (status == 'paid' && delta != 0) {
+        _applyPaidOrderDelta(
+          trx: trx,
+          orderData: data,
+          delta: delta,
+        );
+      }
     });
   }
 }
